@@ -39,16 +39,6 @@
 
 ---
 
-## 🚀 Como Publicar no GitHub Pages
-
-1. Crie um repositório no seu GitHub (ex.: `tangara-preview`).
-2. Envie os arquivos deste projeto (`index.html`, `README.md`, `.nojekyll`) para a raiz do repositório.
-3. No GitHub, acesse **Settings** ➔ **Pages**.
-4. Em **Branch**, selecione `main` (ou `master`), pasta `/ (root)` e clique em **Save**.
-5. Em menos de 2 minutos, o portal estará disponível online em `https://seu-usuario.github.io/tangara-preview/`!
-
----
-
 ## 📜 Licença e Direitos Autorais
 
 © 2026 **TangaráPreview** — IERN Campus Tangará (Prof. Otacílio Barreto Neto). Todos os direitos reservados à equipe acadêmica.
