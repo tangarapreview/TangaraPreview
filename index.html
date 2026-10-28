@@ -408,18 +408,7 @@
 ];
 
     const CONTEUDO_INICIAL = {
-  "pontos": [
-    {
-      "id": "ponto-mvskgzi4wx2m",
-      "lat": -6.19146044993075,
-      "lng": -35.792042355180875,
-      "titulo": "Dhhdhfhfhf",
-      "descricao": "Hdhdhdhd",
-      "imagens": [],
-      "videos": [],
-      "links": []
-    }
-  ],
+  "pontos": [],
   "posts": [],
   "videos": [
     {
@@ -483,6 +472,8 @@
   let _hashUltimosDados = "";
   let _timerAutoSave = null;
   let _arquivoLocalHandle = null;
+  let _versaoLocal = Date.now();
+  let _tempoUltimaGravacaoLocal = 0;
 
   function textoParaBase64Nativo(texto) {
     return new Promise(function (resolve, reject) {
@@ -558,19 +549,39 @@
     } catch (e) {}
   }
 
-  // Aplica novos dados em tempo real na tela do usuário (sem recarregar a página)
+  // Aplica novos dados em tempo real com proteção rigorosa contra reversão de pontos
   function aplicarNovosDadosGlobalmente(novosDados, fonte) {
     if (!novosDados || typeof novosDados !== "object") return;
 
+    const versaoNuvem = Number(novosDados.versao) || 0;
+    const versaoAtual = Number(dados.versao) || 0;
+
+    // PROTEÇÃO TOTAL CONTRA CACHE OBSOLETO (FASTLY CDN ROLLBACK):
+    if (fonte === "nuvem") {
+      // 1. Se salvamos ou removemos algo localmente há menos de 30 segundos,
+      // qualquer resposta da nuvem que tenha versão menor ou igual é REJEITADA.
+      if (Date.now() - _tempoUltimaGravacaoLocal < 30000) {
+        if (versaoNuvem <= _versaoLocal) {
+          return; // Protege as alterações locais!
+        }
+      }
+
+      // 2. Nunca substitui dados mais recentes por dados de versão anterior
+      if (versaoNuvem > 0 && versaoAtual > 0 && versaoNuvem < versaoAtual) {
+        return; // Descarta pacote atrasado!
+      }
+    }
+
     const novoHash = calcularHashDados(novosDados);
-    if (novoHash && novoHash === _hashUltimosDados) return; // Nenhuma modificação detectada
+    if (novoHash && novoHash === _hashUltimosDados) return; // Nenhuma modificação real
     _hashUltimosDados = novoHash;
 
-    // Atualiza o estado em memória
+    // Atualiza estado em memória
     dados.pontos = Array.isArray(novosDados.pontos) ? novosDados.pontos : [];
     dados.posts = Array.isArray(novosDados.posts) ? novosDados.posts : [];
     dados.videos = Array.isArray(novosDados.videos) ? novosDados.videos : [];
-    if (novosDados.versao) dados.versao = novosDados.versao;
+    dados.versao = versaoNuvem || versaoAtual || Date.now();
+    _versaoLocal = dados.versao;
 
     // Higieniza coordenadas
     dados.pontos = dados.pontos.filter(function (p) {
@@ -584,7 +595,7 @@
       localStorage.setItem(CHAVES.videos, JSON.stringify(dados.videos));
     } catch (e) {}
 
-    // ATUALIZAÇÃO VISUAL IMEDIATA NA FRENTE DO USUÁRIO
+    // ATUALIZAÇÃO VISUAL IMEDIATA NA TELA DO USUÁRIO
     if (mapa && camadaMarcadores) {
       desenharMarcadores();
       atualizarAcoesMapa();
@@ -604,20 +615,55 @@
     }
   }
 
-  // Busca o arquivo dados.json da nuvem GitHub e aplica na hora
+  // Busca o arquivo dados.json da nuvem (via API direta se dev logado, ou raw com anti-cache)
   async function sincronizarComNuvem(silencioso) {
     if (_sincronizandoNuvemAgora) return;
+
+    // Não interrompe enquanto o usuário estiver salvando ativamente
+    if (Date.now() - _tempoUltimaGravacaoLocal < 6000) return;
+
     _sincronizandoNuvemAgora = true;
 
     try {
-      const url = URL_DADOS_NUVEM + "?_cb=" + Date.now();
-      const resp = await fetch(url, {
-        cache: "no-store",
-        headers: { "Accept": "application/json" }
-      });
+      const config = obterConfigGitHub();
+      let dadosNuvem = null;
 
-      if (resp.ok) {
-        const dadosNuvem = await resp.json();
+      // 1. Se o desenvolvedor estiver autenticado com token, consulta direto a API do GitHub (0s de cache)
+      if (config && config.token && config.repo) {
+        let repoCompleto = config.repo.trim().replace("https://github.com/", "").replace(/\/$/, "");
+        const urlApi = "https://api.github.com/repos/" + repoCompleto + "/contents/dados.json?ref=" + (config.branch || "main") + "&_cb=" + Date.now();
+        try {
+          const respApi = await fetch(urlApi, {
+            headers: {
+              "Authorization": "Bearer " + config.token.trim(),
+              "Accept": "application/vnd.github.v3+json"
+            },
+            cache: "no-store"
+          });
+          if (respApi.ok) {
+            const jsonApi = await respApi.json();
+            if (jsonApi && jsonApi.content) {
+              const b64Limpo = jsonApi.content.replace(/\s/g, "");
+              const b64Decodificado = decodeURIComponent(escape(atob(b64Limpo)));
+              dadosNuvem = JSON.parse(b64Decodificado);
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 2. Se for visitante ou se a API falhar, busca pela URL pública Raw com anti-cache
+      if (!dadosNuvem) {
+        const urlRaw = URL_DADOS_NUVEM + "?_cb=" + Date.now();
+        const resp = await fetch(urlRaw, {
+          cache: "no-store",
+          headers: { "Accept": "application/json" }
+        });
+        if (resp.ok) {
+          dadosNuvem = await resp.json();
+        }
+      }
+
+      if (dadosNuvem) {
         aplicarNovosDadosGlobalmente(dadosNuvem, silencioso ? "inicio" : "nuvem");
       }
     } catch (err) {
@@ -642,13 +688,13 @@
       }
     } catch (e) {}
 
-    // 2. Dispara verificação imediata na inicialização para furar caches
+    // 2. Dispara verificação imediata na inicialização
     sincronizarComNuvem(true);
 
-    // 3. Heartbeat de sincronização em segundo plano a cada 4 segundos
+    // 3. Heartbeat de sincronização em segundo plano a cada 8 segundos
     setInterval(function () {
       sincronizarComNuvem(false);
-    }, 4000);
+    }, 8000);
 
     // 4. Ao alternar entre abas e voltar para o site, sincroniza na hora
     document.addEventListener("visibilitychange", function () {
@@ -895,8 +941,13 @@
 
   function salvarDados(nome) {
     try {
-      dados.versao = Date.now();
+      const agora = Date.now();
+      _tempoUltimaGravacaoLocal = agora;
+      _versaoLocal = agora;
+      dados.versao = agora;
       dados.atualizadoEm = new Date().toISOString();
+      _hashUltimosDados = calcularHashDados(dados);
+
       localStorage.setItem(CHAVES[nome], JSON.stringify(dados[nome]));
       
       // Notifica abas do mesmo navegador em 0ms
