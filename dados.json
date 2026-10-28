@@ -1,16 +1,19 @@
 {
-  "versao": 1793219144206,
-  "atualizadoEm": "2026-10-28T20:25:44.206Z",
-  "pontos": [],
-  "posts": [
+  "versao": 1793219176984,
+  "atualizadoEm": "2026-10-28T20:26:16.984Z",
+  "pontos": [
     {
-      "id": "post-mvskdn2l2zhj",
-      "titulo": "Oi",
+      "id": "ponto-mvskecd4eftq",
+      "lat": -6.1916200249976105,
+      "lng": -35.79206384050885,
+      "titulo": "Iern",
       "descricao": "",
-      "banner": "",
-      "conteudo": "<p><br></p>"
+      "imagens": [],
+      "videos": [],
+      "links": []
     }
   ],
+  "posts": [],
   "videos": [
     {
       "id": "video-mvqlfpxq3hwl",
