@@ -457,8 +457,22 @@
   // Mantém exatamente o que o usuário escolheu (permite apagar todos os pontos se desejar)
 
     // ===========================================================================
-  // MOTOR DE SALVAMENTO E SINCRONIZAÇÃO AUTOMÁTICA (GITHUB + DISCO + NAVEGADOR)
+  // MOTOR DE SINCRONIZAÇÃO GLOBAL EM TEMPO REAL (GITHUB CLOUD + MULTI-ABAS)
   // ===========================================================================
+  const REPO_PADRAO_GLOBAL = "tangarapreview/TangaraPreview";
+  const CONFIG_GITHUB_PADRAO = {
+    repo: "tangarapreview/TangaraPreview",
+    branch: "main",
+    caminho: "index.html",
+    token: ""
+  };
+  const URL_DADOS_NUVEM = "https://raw.githubusercontent.com/" + REPO_PADRAO_GLOBAL + "/main/dados.json";
+  let canalSyncLocal = null;
+  let _sincronizandoNuvemAgora = false;
+  let _hashUltimosDados = "";
+  let _timerAutoSave = null;
+  let _arquivoLocalHandle = null;
+
   function textoParaBase64Nativo(texto) {
     return new Promise(function (resolve, reject) {
       try {
@@ -483,9 +497,12 @@
   function obterConfigGitHub() {
     try {
       const bruto = localStorage.getItem(CHAVE_GITHUB_CONFIG);
-      if (bruto) return JSON.parse(bruto);
+      if (bruto) {
+        const cfg = JSON.parse(bruto);
+        if (cfg && cfg.token && cfg.repo) return cfg;
+      }
     } catch (e) {}
-    return null;
+    return CONFIG_GITHUB_PADRAO;
   }
 
   function salvarConfigGitHub(config) {
@@ -496,6 +513,143 @@
         localStorage.setItem(CHAVE_GITHUB_CONFIG, JSON.stringify(config));
       }
     } catch (e) {}
+  }
+
+  function calcularHashDados(obj) {
+    try {
+      if (!obj) return "";
+      return JSON.stringify({
+        pt: (obj.pontos || []).map(function(p) { return (p.id || "") + ":" + (p.titulo || ""); }),
+        ps: (obj.posts || []).map(function(p) { return p.id || ""; }),
+        vd: (obj.videos || []).map(function(v) { return v.id || ""; }),
+        v: obj.versao || 0
+      });
+    } catch (e) {
+      return "";
+    }
+  }
+
+  // Notifica outras abas locais abertas no mesmo navegador em 0ms
+  function notificarOutrasAbasLocalmente() {
+    try {
+      if (canalSyncLocal) {
+        canalSyncLocal.postMessage({
+          tipo: "SYNC_DADOS",
+          dados: {
+            versao: dados.versao || Date.now(),
+            atualizadoEm: dados.atualizadoEm || new Date().toISOString(),
+            pontos: dados.pontos || [],
+            posts: dados.posts || [],
+            videos: dados.videos || []
+          }
+        });
+      }
+    } catch (e) {}
+  }
+
+  // Aplica novos dados em tempo real na tela do usuário (sem recarregar a página)
+  function aplicarNovosDadosGlobalmente(novosDados, fonte) {
+    if (!novosDados || typeof novosDados !== "object") return;
+
+    const novoHash = calcularHashDados(novosDados);
+    if (novoHash && novoHash === _hashUltimosDados) return; // Nenhuma modificação detectada
+    _hashUltimosDados = novoHash;
+
+    // Atualiza o estado em memória
+    dados.pontos = Array.isArray(novosDados.pontos) ? novosDados.pontos : [];
+    dados.posts = Array.isArray(novosDados.posts) ? novosDados.posts : [];
+    dados.videos = Array.isArray(novosDados.videos) ? novosDados.videos : [];
+    if (novosDados.versao) dados.versao = novosDados.versao;
+
+    // Higieniza coordenadas
+    dados.pontos = dados.pontos.filter(function (p) {
+      return p && typeof p === "object" && typeof p.lat === "number" && typeof p.lng === "number";
+    });
+
+    // Salva no localStorage para manter a persistência local coerente
+    try {
+      localStorage.setItem(CHAVES.pontos, JSON.stringify(dados.pontos));
+      localStorage.setItem(CHAVES.posts, JSON.stringify(dados.posts));
+      localStorage.setItem(CHAVES.videos, JSON.stringify(dados.videos));
+    } catch (e) {}
+
+    // ATUALIZAÇÃO VISUAL IMEDIATA NA FRENTE DO USUÁRIO
+    if (mapa && camadaMarcadores) {
+      desenharMarcadores();
+      atualizarAcoesMapa();
+    }
+
+    if (abaAtiva === "blog" || abaAtiva === "canal") {
+      const secaoOutros = document.getElementById("secao-outros-container");
+      if (secaoOutros) {
+        if (abaAtiva === "blog") secaoOutros.innerHTML = htmlSecaoBlog();
+        else if (abaAtiva === "canal") secaoOutros.innerHTML = htmlSecaoCanal();
+      }
+    }
+
+    if (fonte === "nuvem" || fonte === "aba") {
+      tocarSomSucesso();
+      mostrarNotificacaoToast("⚡ Site sincronizado em tempo real! (" + dados.pontos.length + " pontos no mapa)");
+    }
+  }
+
+  // Busca o arquivo dados.json da nuvem GitHub e aplica na hora
+  async function sincronizarComNuvem(silencioso) {
+    if (_sincronizandoNuvemAgora) return;
+    _sincronizandoNuvemAgora = true;
+
+    try {
+      const url = URL_DADOS_NUVEM + "?_cb=" + Date.now();
+      const resp = await fetch(url, {
+        cache: "no-store",
+        headers: { "Accept": "application/json" }
+      });
+
+      if (resp.ok) {
+        const dadosNuvem = await resp.json();
+        aplicarNovosDadosGlobalmente(dadosNuvem, silencioso ? "inicio" : "nuvem");
+      }
+    } catch (err) {
+    } finally {
+      _sincronizandoNuvemAgora = false;
+    }
+  }
+
+  // Inicializa a sincronização em tempo real para todos os usuários
+  function iniciarSincronizacaoGlobalEmTempoReal() {
+    _hashUltimosDados = calcularHashDados(dados);
+
+    // 1. Canal entre abas locais (BroadcastChannel) - 0ms de atraso
+    try {
+      if (typeof BroadcastChannel !== "undefined") {
+        canalSyncLocal = new BroadcastChannel("tangara_realtime_sync");
+        canalSyncLocal.onmessage = function (ev) {
+          if (ev && ev.data && ev.data.tipo === "SYNC_DADOS" && ev.data.dados) {
+            aplicarNovosDadosGlobalmente(ev.data.dados, "aba");
+          }
+        };
+      }
+    } catch (e) {}
+
+    // 2. Dispara verificação imediata na inicialização para furar caches
+    sincronizarComNuvem(true);
+
+    // 3. Heartbeat de sincronização em segundo plano a cada 4 segundos
+    setInterval(function () {
+      sincronizarComNuvem(false);
+    }, 4000);
+
+    // 4. Ao alternar entre abas e voltar para o site, sincroniza na hora
+    document.addEventListener("visibilitychange", function () {
+      if (document.visibilityState === "visible") {
+        sincronizarComNuvem(false);
+      }
+    });
+
+    // 5. Ao focar a janela do navegador
+    window.addEventListener("focus", function () {
+      sincronizarComNuvem(false);
+    });
   }
 
   // Gera o código HTML completo atualizado com dados e desenvolvedores embutidos
@@ -540,8 +694,8 @@
     return textoHtml;
   }
 
-  // Sincroniza diretamente com o repositório no GitHub via REST API
-  async function sincronizarComGitHubApi(textoHtml, motivo) {
+  // Sincroniza dados.json no GitHub via REST API em alta velocidade (< 500ms)
+  async function sincronizarDadosJsonNuvem(motivo) {
     const config = obterConfigGitHub();
     if (!config || !config.token || !config.repo) return false;
 
@@ -551,13 +705,9 @@
     }
     const token = config.token.trim();
     const branch = config.branch || "main";
-    const caminho = config.caminho || "index.html";
-    const urlApi = "https://api.github.com/repos/" + repoCompleto + "/contents/" + caminho;
-
-    mostrarNotificacaoToast("🔄 Sincronizando com o GitHub Pages em tempo real...");
+    const urlApi = "https://api.github.com/repos/" + repoCompleto + "/contents/dados.json";
 
     try {
-      // 1. Obtém o SHA atual do arquivo no GitHub
       let shaAtual = null;
       try {
         const respGet = await fetch(urlApi + "?ref=" + branch, {
@@ -572,13 +722,74 @@
         }
       } catch (e) {}
 
-      // Validação do formato usuario/repo
-      if (repoCompleto.indexOf("/") === -1) {
-        mostrarNotificacaoToast("⚠️ Erro: Coloque o repositório no formato 'usuario/nome' (ex.: seu-usuario/tangara-preview).");
-        return false;
-      }
+      const objetoNuvem = {
+        versao: dados.versao || Date.now(),
+        atualizadoEm: dados.atualizadoEm || new Date().toISOString(),
+        pontos: Array.isArray(dados.pontos) ? dados.pontos : [],
+        posts: Array.isArray(dados.posts) ? dados.posts : [],
+        videos: Array.isArray(dados.videos) ? dados.videos : []
+      };
 
-      // 2. Envia o commit com o novo index.html
+      const textoJson = JSON.stringify(objetoNuvem, null, 2);
+      const b64 = await textoParaBase64Nativo(textoJson);
+      const payload = {
+        message: "Live-Sync Dados TangaráPreview: " + (motivo || "Atualização em tempo real"),
+        content: b64,
+        branch: branch
+      };
+      if (shaAtual) payload.sha = shaAtual;
+
+      const respPut = await fetch(urlApi, {
+        method: "PUT",
+        headers: {
+          "Authorization": "Bearer " + token,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (respPut.ok) {
+        _hashUltimosDados = calcularHashDados(objetoNuvem);
+        tocarSomSucesso();
+        mostrarNotificacaoToast("⚡ Salvo e publicado globalmente na nuvem em tempo real!");
+        return true;
+      }
+      return false;
+    } catch (err) {
+      return false;
+    }
+  }
+
+  // Sincroniza index.html no GitHub via REST API
+  async function sincronizarComGitHubApi(textoHtml, motivo) {
+    const config = obterConfigGitHub();
+    if (!config || !config.token || !config.repo) return false;
+
+    let repoCompleto = config.repo.trim();
+    if (repoCompleto.startsWith("https://github.com/")) {
+      repoCompleto = repoCompleto.replace("https://github.com/", "").replace(/\/$/, "");
+    }
+    const token = config.token.trim();
+    const branch = config.branch || "main";
+    const caminho = config.caminho || "index.html";
+    const urlApi = "https://api.github.com/repos/" + repoCompleto + "/contents/" + caminho;
+
+    try {
+      let shaAtual = null;
+      try {
+        const respGet = await fetch(urlApi + "?ref=" + branch, {
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/vnd.github.v3+json"
+          }
+        });
+        if (respGet.ok) {
+          const dadosGet = await respGet.json();
+          shaAtual = dadosGet.sha;
+        }
+      } catch (e) {}
+
       const b64 = await textoParaBase64Nativo(textoHtml);
       const payload = {
         message: "Auto-sync TangaráPreview: " + (motivo || "Alteração salva"),
@@ -597,17 +808,8 @@
         body: JSON.stringify(payload)
       });
 
-      if (respPut.ok) {
-        tocarSomSucesso();
-        mostrarNotificacaoToast("🚀 Salvo e sincronizado no GitHub com sucesso! O site no ar já foi atualizado.");
-        return true;
-      } else {
-        const errJson = await respPut.json().catch(function() { return {}; });
-        console.warn("Falha ao sincronizar com GitHub API:", errJson);
-        return false;
-      }
+      return respPut.ok;
     } catch (err) {
-      console.warn("Erro de conexão com o GitHub:", err);
       return false;
     }
   }
@@ -653,23 +855,20 @@
     if (!autoAtivo) return;
 
     try {
-      const textoHtml = await gerarTextoHtmlAtualizado();
+      // 1. Sincroniza imediatamente o arquivo dados.json na nuvem em alta velocidade (< 500ms)
+      await sincronizarDadosJsonNuvem(motivo);
 
-      // Prioridade 1: Sincronização direta na nuvem com o GitHub
+      // 2. Sincroniza index.html no GitHub para manter a página estática atualizada
+      const textoHtml = await gerarTextoHtmlAtualizado();
       const configGitHub = obterConfigGitHub();
       if (configGitHub && configGitHub.token && configGitHub.repo) {
-        const okGitHub = await sincronizarComGitHubApi(textoHtml, motivo);
-        if (okGitHub) return;
+        await sincronizarComGitHubApi(textoHtml, motivo);
       }
 
-      // Prioridade 2: Gravação direta no arquivo local do disco (se vinculado)
+      // 3. Gravação direta no disco local (se API vinculada)
       if (_arquivoLocalHandle) {
-        const okDisco = await gravarArquivoLocalDisco(textoHtml);
-        if (okDisco) return;
+        await gravarArquivoLocalDisco(textoHtml);
       }
-
-      // Prioridade 3: Download automático do arquivo atualizado
-      baixarArquivoIndexAtualizado(textoHtml);
     } catch (err) {
       console.error("Erro no auto-salvamento:", err);
     }
@@ -680,12 +879,22 @@
     if (_timerAutoSave) clearTimeout(_timerAutoSave);
     _timerAutoSave = setTimeout(function () {
       executarSalvamentoAutomatico(motivo);
-    }, 700);
+    }, 600);
   }
 
   function salvarDados(nome) {
     try {
+      dados.versao = Date.now();
+      dados.atualizadoEm = new Date().toISOString();
       localStorage.setItem(CHAVES[nome], JSON.stringify(dados[nome]));
+      
+      // Notifica abas do mesmo navegador em 0ms
+      notificarOutrasAbasLocalmente();
+      
+      // Sincroniza imediatamente dados.json na nuvem para atualizar o mundo inteiro em tempo real
+      sincronizarDadosJsonNuvem("Alteração em " + nome);
+      
+      // Agenda index.html no GitHub
       agendarSalvamentoAutomatico("Alteração em " + nome);
     } catch (erro) {
       window.alert("Não foi possível salvar: o armazenamento do navegador está cheio. Tente usar imagens mais leves.");
@@ -709,8 +918,6 @@
   const CHAVE_SESSAO_ADMIN = "tangara_preview_sessao_ativa";
   const CHAVE_AUTOSAVE_ATIVO = "tp_autosave_ativo";
   const CHAVE_GITHUB_CONFIG = "tp_github_config";
-  let _arquivoLocalHandle = null;
-  let _timerAutoSave = null;
   // Código secreto mestre oficial (2010koko2123) hasheado em SHA-256 com salt
   const HASH_PADRAO_ADMIN = "c7e8d56008d782ac0623cde7298001ca95b0ae622d91219377c4a5a3ef6fc869";
 
@@ -4414,6 +4621,9 @@ function podeEditar() {
     inicializarSessaoSegura();
   }
   iniciarAnimacaoEntrada();
+  if (typeof iniciarSincronizacaoGlobalEmTempoReal === "function") {
+    iniciarSincronizacaoGlobalEmTempoReal();
+  }
   
   // ===========================================================================
   // BLINDAGEM DE SEGURANÇA MÁXIMA: ANTI-INSPEÇÃO, ANTI-DEBUGGER E ANTI-CÓDIGO FONTE
