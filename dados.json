@@ -1,0 +1,20 @@
+{
+  "versao": 1,
+  "atualizadoEm": "2026-10-28T20:10:00Z",
+  "pontos": [],
+  "posts": [],
+  "videos": [
+    {
+      "id": "video-mvqlfpxq3hwl",
+      "titulo": "Mostrando locais da cidade do pastel Tangará RN",
+      "descricao": "Pontos turísticos de Tangará RN",
+      "link": "https://www.youtube-nocookie.com/embed/elpyL98mYnA?rel=0&enablejsapi=1"
+    },
+    {
+      "id": "video-iern",
+      "titulo": "Adentrando o IERN de Tangará RN",
+      "descricao": "Vídeo do canal documentando a estrutura do IERN Campus Tangará",
+      "link": "https://www.youtube.com/watch?v=ztuD_VnnF8E"
+    }
+  ]
+}
