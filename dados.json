@@ -1,6 +1,6 @@
 {
-  "versao": 1793220617279,
-  "atualizadoEm": "2026-10-28T20:50:17.279Z",
+  "versao": 1793220768576,
+  "atualizadoEm": "2026-10-28T20:52:48.576Z",
   "pontos": [
     {
       "id": "ponto-mvsl97pbdtbt",
@@ -13,7 +13,15 @@
       "links": []
     }
   ],
-  "posts": [],
+  "posts": [
+    {
+      "id": "post-mvslcgg0q74y",
+      "titulo": "Hrududjdjdjdjd",
+      "descricao": "",
+      "banner": "",
+      "conteudo": "<p><br></p>"
+    }
+  ],
   "videos": [
     {
       "id": "video-mvqlfpxq3hwl",
