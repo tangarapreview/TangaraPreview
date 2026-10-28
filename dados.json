@@ -1,7 +1,18 @@
 {
-  "versao": 1793220595254,
-  "atualizadoEm": "2026-10-28T20:49:55.254Z",
-  "pontos": [],
+  "versao": 1793220617279,
+  "atualizadoEm": "2026-10-28T20:50:17.279Z",
+  "pontos": [
+    {
+      "id": "ponto-mvsl97pbdtbt",
+      "lat": -6.2002893651922495,
+      "lng": -35.80050458757087,
+      "titulo": "Tangara",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    }
+  ],
   "posts": [],
   "videos": [
     {
