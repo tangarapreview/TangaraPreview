@@ -526,9 +526,220 @@
     }
   }
 
+    // ===========================================================================
+  // MOTOR DE SALVAMENTO E SINCRONIZAÇÃO AUTOMÁTICA (GITHUB + DISCO + NAVEGADOR)
+  // ===========================================================================
+  function utf8ParaBase64(str) {
+    const bytes = new TextEncoder().encode(str);
+    let binario = "";
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i++) {
+      binario += String.fromCharCode(bytes[i]);
+    }
+    return window.btoa(binario);
+  }
+
+  function obterConfigGitHub() {
+    try {
+      const bruto = localStorage.getItem(CHAVE_GITHUB_CONFIG);
+      if (bruto) return JSON.parse(bruto);
+    } catch (e) {}
+    return null;
+  }
+
+  function salvarConfigGitHub(config) {
+    try {
+      if (!config) {
+        localStorage.removeItem(CHAVE_GITHUB_CONFIG);
+      } else {
+        localStorage.setItem(CHAVE_GITHUB_CONFIG, JSON.stringify(config));
+      }
+    } catch (e) {}
+  }
+
+  // Gera o código HTML completo atualizado com dados e desenvolvedores embutidos
+  async function gerarTextoHtmlAtualizado() {
+    let textoHtml = "";
+    try {
+      if (window.location.protocol.indexOf("http") === 0) {
+        const resp = await fetch(window.location.href, { cache: "no-store" });
+        if (resp.ok) {
+          textoHtml = await resp.text();
+        }
+      }
+    } catch (e) {}
+
+    if (!textoHtml || textoHtml.indexOf("const CONTEUDO_INICIAL") === -1) {
+      const clone = document.documentElement.cloneNode(true);
+      const modais = clone.querySelector("#modais");
+      if (modais) modais.innerHTML = "";
+      const overlay = clone.querySelector("#overlay-boas-vindas-dev");
+      if (overlay) overlay.remove();
+      const mapEl = clone.querySelector("#mapa");
+      if (mapEl) {
+        mapEl.innerHTML = "";
+        mapEl.className = "rounded-xl border-[3px] border-[#0d2b52] overflow-hidden relative shadow-sm";
+      }
+      textoHtml = "<!DOCTYPE html>\n<html lang=\"pt-BR\">\n" + clone.innerHTML + "\n</html>";
+    }
+
+    const conteudoAtualizado = {
+      pontos: (dados.pontos && dados.pontos.length > 0) ? dados.pontos : CONTEUDO_INICIAL.pontos,
+      posts: dados.posts,
+      videos: dados.videos
+    };
+    const devsAtuais = obterDevsCadastrados();
+
+    const strConteudo = "const CONTEUDO_INICIAL = " + JSON.stringify(conteudoAtualizado, null, 2) + ";";
+    const strDevs = "const DEVS_INICIAIS = " + JSON.stringify(devsAtuais, null, 2) + ";";
+
+    textoHtml = textoHtml.replace(/const CONTEUDO_INICIAL\s*=\s*\{[\s\S]*?\n\s*\};/, strConteudo);
+    textoHtml = textoHtml.replace(/const DEVS_INICIAIS\s*=\s*\[[\s\S]*?\n\s*\];/, strDevs);
+
+    return textoHtml;
+  }
+
+  // Sincroniza diretamente com o repositório no GitHub via REST API
+  async function sincronizarComGitHubApi(textoHtml, motivo) {
+    const config = obterConfigGitHub();
+    if (!config || !config.token || !config.repo) return false;
+
+    let repoCompleto = config.repo.trim();
+    if (repoCompleto.startsWith("https://github.com/")) {
+      repoCompleto = repoCompleto.replace("https://github.com/", "").replace(/\/$/, "");
+    }
+    const token = config.token.trim();
+    const branch = config.branch || "main";
+    const caminho = config.caminho || "index.html";
+    const urlApi = "https://api.github.com/repos/" + repoCompleto + "/contents/" + caminho;
+
+    mostrarNotificacaoToast("🔄 Sincronizando com o GitHub Pages em tempo real...");
+
+    try {
+      // 1. Obtém o SHA atual do arquivo no GitHub
+      let shaAtual = null;
+      try {
+        const respGet = await fetch(urlApi + "?ref=" + branch, {
+          headers: {
+            "Authorization": "Bearer " + token,
+            "Accept": "application/vnd.github.v3+json"
+          }
+        });
+        if (respGet.ok) {
+          const dadosGet = await respGet.json();
+          shaAtual = dadosGet.sha;
+        }
+      } catch (e) {}
+
+      // 2. Envia o commit com o novo index.html
+      const b64 = utf8ParaBase64(textoHtml);
+      const payload = {
+        message: "Auto-sync TangaráPreview: " + (motivo || "Alteração salva"),
+        content: b64,
+        branch: branch
+      };
+      if (shaAtual) payload.sha = shaAtual;
+
+      const respPut = await fetch(urlApi, {
+        method: "PUT",
+        headers: {
+          "Authorization": "Bearer " + token,
+          "Accept": "application/vnd.github.v3+json",
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (respPut.ok) {
+        tocarSomSucesso();
+        mostrarNotificacaoToast("🚀 Salvo e sincronizado no GitHub com sucesso! O site no ar já foi atualizado.");
+        return true;
+      } else {
+        const errJson = await respPut.json().catch(function() { return {}; });
+        console.warn("Falha ao sincronizar com GitHub API:", errJson);
+        return false;
+      }
+    } catch (err) {
+      console.warn("Erro de conexão com o GitHub:", err);
+      return false;
+    }
+  }
+
+  // Grava diretamente no arquivo local do disco se a File System Access API estiver vinculada
+  async function gravarArquivoLocalDisco(textoHtml) {
+    if (!_arquivoLocalHandle) return false;
+    try {
+      const writable = await _arquivoLocalHandle.createWritable();
+      await writable.write(textoHtml);
+      await writable.close();
+      tocarSomSucesso();
+      mostrarNotificacaoToast("💾 Alteração gravada diretamente no index.html do seu computador!");
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Baixa o arquivo index.html atualizado
+  function baixarArquivoIndexAtualizado(textoHtml) {
+    try {
+      const blob = new Blob([textoHtml], { type: "text/html;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "index.html";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      tocarSomSucesso();
+      mostrarNotificacaoToast("💾 index.html atualizado baixado automaticamente com as novas alterações!");
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  // Dispara o fluxo de salvamento automático inteligente
+  async function executarSalvamentoAutomatico(motivo) {
+    const autoAtivo = localStorage.getItem(CHAVE_AUTOSAVE_ATIVO) !== "false";
+    if (!autoAtivo) return;
+
+    try {
+      const textoHtml = await gerarTextoHtmlAtualizado();
+
+      // Prioridade 1: Sincronização direta na nuvem com o GitHub
+      const configGitHub = obterConfigGitHub();
+      if (configGitHub && configGitHub.token && configGitHub.repo) {
+        const okGitHub = await sincronizarComGitHubApi(textoHtml, motivo);
+        if (okGitHub) return;
+      }
+
+      // Prioridade 2: Gravação direta no arquivo local do disco (se vinculado)
+      if (_arquivoLocalHandle) {
+        const okDisco = await gravarArquivoLocalDisco(textoHtml);
+        if (okDisco) return;
+      }
+
+      // Prioridade 3: Download automático do arquivo atualizado
+      baixarArquivoIndexAtualizado(textoHtml);
+    } catch (err) {
+      console.error("Erro no auto-salvamento:", err);
+    }
+  }
+
+  // Agenda com debounce para não sobrecarregar
+  function agendarSalvamentoAutomatico(motivo) {
+    if (_timerAutoSave) clearTimeout(_timerAutoSave);
+    _timerAutoSave = setTimeout(function () {
+      executarSalvamentoAutomatico(motivo);
+    }, 700);
+  }
+
   function salvarDados(nome) {
     try {
       localStorage.setItem(CHAVES[nome], JSON.stringify(dados[nome]));
+      agendarSalvamentoAutomatico("Alteração em " + nome);
     } catch (erro) {
       window.alert("Não foi possível salvar: o armazenamento do navegador está cheio. Tente usar imagens mais leves.");
     }
@@ -549,6 +760,10 @@
   const CHAVE_DEV_ATIVO = "tangara_preview_dev_ativo";
   const CHAVE_HASH_LOCAL = "tangara_preview_hash_admin";
   const CHAVE_SESSAO_ADMIN = "tangara_preview_sessao_ativa";
+  const CHAVE_AUTOSAVE_ATIVO = "tp_autosave_ativo";
+  const CHAVE_GITHUB_CONFIG = "tp_github_config";
+  let _arquivoLocalHandle = null;
+  let _timerAutoSave = null;
   // Código secreto mestre oficial (2010koko2123) hasheado em SHA-256 com salt
   const HASH_PADRAO_ADMIN = "c7e8d56008d782ac0623cde7298001ca95b0ae622d91219377c4a5a3ef6fc869";
 
@@ -710,6 +925,7 @@
       const jsonLimpo = JSON.stringify(lista);
       const seguro = await criptografarCofre(jsonLimpo);
       localStorage.setItem(CHAVE_DEVS_LOCAL, seguro);
+      agendarSalvamentoAutomatico("Atualização de desenvolvedores");
     } catch (e) {}
   }
 
@@ -1651,6 +1867,98 @@ function podeEditar() {
     reader.readAsText(arquivo);
   }
 
+    // Modal para conectar Token do GitHub e ativar auto-sync na nuvem
+  function abrirModalConfigGitHub() {
+    fecharModal();
+    const configAtual = obterConfigGitHub() || { repo: "seu-usuario/tangara-preview", branch: "main", token: "" };
+
+    const corpo =
+      '<div class="space-y-4 text-[#121212]">' +
+        '<div class="p-3 rounded-xl bg-blue-50 border border-blue-200 text-xs text-[#0d2b52] leading-relaxed">' +
+          'Ao conectar seu GitHub, qualquer alteração feita por desenvolvedores ou novos cadastros será <strong>automaticamente gravada no seu repositório</strong> via API oficial sem precisar baixar ou arrastar arquivos!' +
+        '</div>' +
+        '<div class="space-y-1.5">' +
+          '<label class="' + CLS_LABEL + '" for="gh-repo">Repositório no GitHub (usuário/nome-do-repo) *</label>' +
+          '<input id="gh-repo" class="' + CLS_INPUT + '" placeholder="ex.: joseirineljunior/tangara-preview" value="' + escapar(configAtual.repo || "") + '" />' +
+        '</div>' +
+        '<div class="space-y-1.5">' +
+          '<label class="' + CLS_LABEL + '" for="gh-branch">Branch Principal *</label>' +
+          '<input id="gh-branch" class="' + CLS_INPUT + '" placeholder="main" value="' + escapar(configAtual.branch || "main") + '" />' +
+        '</div>' +
+        '<div class="space-y-1.5">' +
+          '<label class="' + CLS_LABEL + '" for="gh-token">Personal Access Token (PAT) do GitHub *</label>' +
+          '<input id="gh-token" type="password" class="' + CLS_INPUT + '" placeholder="ghp_... ou github_pat_..." value="' + escapar(configAtual.token || "") + '" />' +
+          '<p class="text-[10px] text-[#121212]/60">Criado em: GitHub -> Settings -> Developer Settings -> Personal access tokens (com permissão de escrita em repositório).</p>' +
+        '</div>' +
+        (configAtual.token ? '<p class="text-xs text-emerald-700 font-semibold flex items-center gap-1.5">' + icone("shield", "w-4 h-4") + 'Token configurado e ativo neste navegador.</p>' : '') +
+      '</div>';
+
+    const rodape =
+      '<div class="flex justify-between items-center gap-2">' +
+        (configAtual.token
+          ? '<button type="button" id="btn-remover-gh" class="px-3 py-2 text-xs font-bold text-[#d43a3a] hover:underline">Desconectar</button>'
+          : '<div></div>') +
+        '<div class="flex gap-2">' +
+          '<button type="button" data-acao="fechar-modal" class="' + CLS_BTN_CONTORNO + '">Cancelar</button>' +
+          '<button type="button" id="btn-salvar-gh" class="' + CLS_BTN_AZUL + '">Salvar Conexão</button>' +
+        '</div>' +
+      '</div>';
+
+    abrirModal({
+      titulo: "Conectar Sincronização em Nuvem (GitHub)",
+      corpoHtml: corpo,
+      rodapeHtml: rodape
+    });
+
+    const btnSalvar = document.getElementById("btn-salvar-gh");
+    if (btnSalvar) {
+      btnSalvar.addEventListener("click", function () {
+        const repo = document.getElementById("gh-repo").value.trim();
+        const branch = document.getElementById("gh-branch").value.trim() || "main";
+        const token = document.getElementById("gh-token").value.trim();
+
+        if (!repo || !token) {
+          window.alert("Por favor, preencha o repositório e o token do GitHub.");
+          return;
+        }
+
+        salvarConfigGitHub({ repo: repo, branch: branch, token: token });
+        fecharModal();
+        mostrarNotificacaoToast("✅ Conexão com GitHub salva! Alterações serão enviadas para a nuvem automaticamente.");
+        tocarSomSucesso();
+      });
+    }
+
+    const btnRemover = document.getElementById("btn-remover-gh");
+    if (btnRemover) {
+      btnRemover.addEventListener("click", function () {
+        salvarConfigGitHub(null);
+        fecharModal();
+        mostrarNotificacaoToast("Conexão com GitHub desconectada.");
+      });
+    }
+  }
+
+  // Permite selecionar o arquivo index.html no disco para salvar silenciosamente direto nele
+  async function vincularArquivoDisco() {
+    if (!window.showOpenFilePicker) {
+      window.alert("Seu navegador atual não suporta gravação direta no disco. Use o auto-download automático ou a sincronização com o GitHub.");
+      return;
+    }
+    try {
+      const handles = await window.showOpenFilePicker({
+        types: [{ description: "Arquivo HTML do Projeto", accept: { "text/html": [".html"] } }],
+        multiple: false
+      });
+      if (handles && handles.length > 0) {
+        _arquivoLocalHandle = handles[0];
+        fecharModal();
+        tocarSomSucesso();
+        mostrarNotificacaoToast("📁 Arquivo vinculado! Agora qualquer mudança será gravada diretamente nele.");
+      }
+    } catch (e) {}
+  }
+
   function abrirPainelDev() {
     fecharModal();
     const devs = obterDevsCadastrados();
@@ -1802,6 +2110,26 @@ function podeEditar() {
       btnMudarSenha.addEventListener("click", function () {
         abrirModalAlterarSenha();
       });
+    }
+
+        // Configuração de Auto-Save e Conexão GitHub no Painel
+    const chkAutoSave = document.getElementById("chk-auto-save");
+    if (chkAutoSave) {
+      chkAutoSave.checked = localStorage.getItem(CHAVE_AUTOSAVE_ATIVO) !== "false";
+      chkAutoSave.addEventListener("change", function () {
+        localStorage.setItem(CHAVE_AUTOSAVE_ATIVO, chkAutoSave.checked ? "true" : "false");
+        mostrarNotificacaoToast(chkAutoSave.checked ? "Auto-salvamento ativado!" : "Auto-salvamento pausado.");
+      });
+    }
+
+    const btnConectarGitHub = document.getElementById("btn-conectar-github");
+    if (btnConectarGitHub) {
+      btnConectarGitHub.addEventListener("click", abrirModalConfigGitHub);
+    }
+
+    const btnVincularDisco = document.getElementById("btn-vincular-disco");
+    if (btnVincularDisco) {
+      btnVincularDisco.addEventListener("click", vincularArquivoDisco);
     }
 
     const btnExportarGitHub = document.getElementById("btn-exportar-github-html");
