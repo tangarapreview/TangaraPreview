@@ -407,24 +407,82 @@
   }
 ];
 
-  const CONTEUDO_INICIAL = {
-  "pontos": [],
-  "posts": [],
-  "videos": [
-    {
-      "id": "video-mvqlfpxq3hwl",
-      "titulo": "Mostrando locais da cidade do pastel Tangará RN",
-      "descricao": "Pontos turísticos de Tangará RN",
-      "link": "https://www.youtube-nocookie.com/embed/elpyL98mYnA?rel=0&enablejsapi=1"
-    },
-    {
-      "id": "video-iern",
-      "titulo": "Adentrando o IERN de Tangará RN",
-      "descricao": "Vídeo do canal documentando a estrutura do IERN Campus Tangará",
-      "link": "https://www.youtube.com/watch?v=ztuD_VnnF8E"
-    }
-  ]
-};
+    const CONTEUDO_INICIAL = {
+    pontos: [
+      {
+        id: "ponto-iern",
+        titulo: "IERN Campus Tangará (Prof. Otacílio Barreto Neto)",
+        descricao: "Instituto Estadual de Educação Profissional, Tecnologia e Inovação do Rio Grande do Norte. Centro de ensino e pesquisa cartográfica histórica do município de Tangará-RN.",
+        categoria: "Educação e Inovação",
+        lat: -6.210833,
+        lng: -35.790833,
+        imagens: [],
+        videos: ["https://www.youtube.com/watch?v=ztuD_VnnF8E"],
+        links: [
+          { titulo: "Apresentação do IERN no Canal", url: "https://www.youtube.com/watch?v=ztuD_VnnF8E" }
+        ],
+      },
+      {
+        id: "ponto-igreja-matriz",
+        titulo: "Igreja Matriz do Sagrado Coração de Jesus",
+        descricao: "Marco religioso, histórico e cultural central de Tangará-RN. Erguida no coração da cidade, simboliza a memória comunitária, as tradições festivas e a formação urbana do município.",
+        categoria: "Patrimônio Histórico e Religioso",
+        lat: -6.198517,
+        lng: -35.801210,
+        imagens: [],
+        videos: [],
+        links: [],
+      },
+      {
+        id: "ponto-estacao-ferroviaria",
+        titulo: "Estação Ferroviária Histórica de Tangará",
+        descricao: "Inaugurada no início do século XX pela Great Western of Brazil Railway, a Estação Ferroviária foi o motor do povoamento, do comércio algodoeiro e da expansão econômica e demográfica de Tangará e de todo o Polo Trairi.",
+        categoria: "Patrimônio Ferroviário e Histórico",
+        lat: -6.199444,
+        lng: -35.802222,
+        imagens: [],
+        videos: [],
+        links: [],
+      },
+      {
+        id: "ponto-cruzeiro-serra",
+        titulo: "Mirante do Cruzeiro de Tangará",
+        descricao: "Ponto tradicional de peregrinação religiosa e contemplação panorâmica da geografia tangaraense. Oferece visão privilegiada do relevo semiárido, do vale do Trairi e do traçado urbano histórico.",
+        categoria: "Patrimônio Cultural e Paisagístico",
+        lat: -6.193611,
+        lng: -35.803889,
+        imagens: [],
+        videos: [],
+        links: [],
+      },
+      {
+        id: "ponto-serra-rajada",
+        titulo: "Serra da Rajada (Patrimônio Geomorfológico)",
+        descricao: "Imponente monumento geológico e marco paisagístico de Tangará-RN. Referência na cartografia regional por sua biodiversidade de caatinga, trilhas ecológicas e valor memorial para os habitantes locais.",
+        categoria: "Patrimônio Natural e Ecológico",
+        lat: -6.205556,
+        lng: -35.825000,
+        imagens: [],
+        videos: [],
+        links: [],
+      }
+    ],
+    posts: [],
+    videos: [
+      {
+        id: "video-mvqlfpxq3hwl",
+        titulo: "Mostrando locais da cidade do pastel Tangará RN",
+        descricao: "Pontos turísticos de Tangará RN",
+        link: "https://www.youtube-nocookie.com/embed/elpyL98mYnA?rel=0&enablejsapi=1"
+      },
+      {
+        id: "video-iern",
+        titulo: "Adentrando o IERN de Tangará RN",
+        descricao: "Vídeo do canal documentando a estrutura do IERN Campus Tangará",
+        link: "https://www.youtube.com/watch?v=ztuD_VnnF8E"
+      }
+    ]
+  };
 
   function lerArmazenado(chave, padrao) {
     try {
@@ -440,15 +498,32 @@
     return padrao;
   }
 
-  const dados = {
+    const dados = {
     pontos: lerArmazenado(CHAVES.pontos, CONTEUDO_INICIAL.pontos),
     posts: lerArmazenado(CHAVES.posts, CONTEUDO_INICIAL.posts),
     videos: lerArmazenado(CHAVES.videos, CONTEUDO_INICIAL.videos),
   };
-  // Garante que o ponto da escola IERN esteja no mapa se ainda não foi adicionado
-  if (!dados.pontos.some(function (p) { return p.id === "ponto-iern" || p.titulo.indexOf("IERN") !== -1; })) {
-    dados.pontos.unshift(CONTEUDO_INICIAL.pontos[0]);
+
+  // Higienização completa da lista de pontos contra valores corrompidos (null, undefined, sem coordenadas)
+  if (!Array.isArray(dados.pontos)) {
+    dados.pontos = [];
+  }
+  dados.pontos = dados.pontos.filter(function (p) {
+    return p && typeof p === "object" && typeof p.lat === "number" && typeof p.lng === "number";
+  });
+
+  // Se a lista estiver vazia ou sem pontos, restaura os 5 marcos históricos do IERN
+  if (dados.pontos.length === 0 && Array.isArray(CONTEUDO_INICIAL.pontos) && CONTEUDO_INICIAL.pontos.length > 0) {
+    dados.pontos = JSON.parse(JSON.stringify(CONTEUDO_INICIAL.pontos));
     salvarDados("pontos");
+  } else {
+    const temIern = dados.pontos.some(function (p) {
+      return p && (p.id === "ponto-iern" || (typeof p.titulo === "string" && p.titulo.indexOf("IERN") !== -1));
+    });
+    if (!temIern && Array.isArray(CONTEUDO_INICIAL.pontos) && CONTEUDO_INICIAL.pontos[0]) {
+      dados.pontos.unshift(JSON.parse(JSON.stringify(CONTEUDO_INICIAL.pontos[0])));
+      salvarDados("pontos");
+    }
   }
 
   function salvarDados(nome) {
@@ -2353,97 +2428,111 @@ function podeEditar() {
       "</div>";
   }
 
-  function desenharMarcadores() {
+    function desenharMarcadores() {
     if (!mapa || !camadaMarcadores) return;
     camadaMarcadores.clearLayers();
+    if (!Array.isArray(dados.pontos)) return;
     dados.pontos.forEach(function (ponto) {
-      if (typeof ponto.lat !== "number" || typeof ponto.lng !== "number") return;
-      const marcador = L.marker([ponto.lat, ponto.lng], { icon: iconeMarcador })
-        .addTo(camadaMarcadores);
+      if (!ponto || typeof ponto.lat !== "number" || typeof ponto.lng !== "number") return;
+      try {
+        const marcador = L.marker([ponto.lat, ponto.lng], { icon: iconeMarcador })
+          .addTo(camadaMarcadores);
 
-      marcador.bindTooltip(ponto.titulo, { direction: "top", offset: [0, -36] });
+        marcador.bindTooltip(ponto.titulo || "Marco Histórico", { direction: "top", offset: [0, -36] });
 
-      marcador.on("click", function (e) {
-        if (e && e.originalEvent) {
-          L.DomEvent.stopPropagation(e);
-        }
-        abrirDetalhePonto(ponto);
-      });
+        marcador.on("click", function () {
+          tocarSomBotao();
+          abrirDetalhePonto(ponto);
+        });
+      } catch (e) {}
     });
   }
 
-  function renderMapa() {
-    destruirMapa();
-
-    const conteudo = document.getElementById("conteudo");
-    conteudo.innerHTML = '<div class="max-w-[1100px] w-full mx-auto px-4 py-4">' + htmlSecaoMapa() + "</div>";
-
+    function renderMapa() {
     const container = document.getElementById("mapa");
-    if (container && container._leaflet_id) {
+    if (!container) return;
+
+    if (container._leaflet_id) {
       container._leaflet_id = null;
     }
 
-    mapa = L.map("mapa", {
-      scrollWheelZoom: true,
-      zoomControl: true,
-      fadeAnimation: true,
-    }).setView([-6.21095, -35.79157], 13);
-    if (mapa.attributionControl) mapa.attributionControl.setPrefix(false);
+    try {
+      mapa = L.map("mapa", {
+        scrollWheelZoom: true,
+        zoomControl: true,
+        fadeAnimation: true,
+      }).setView([-6.21095, -35.79157], 13);
+      if (mapa.attributionControl) mapa.attributionControl.setPrefix(false);
 
-    // Camada exclusiva Google Maps Satélite (com ruas e relevo híbrido)
-    const camadaGoogleHibrido = L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
-      subdomains: ["0", "1", "2", "3"],
-      maxZoom: 20,
-      attribution: '&copy; Google Maps'
-    });
+      // Camada Google Maps Satélite Híbrido
+      const camadaGoogleHibrido = L.tileLayer("https://mt{s}.google.com/vt/lyrs=y&x={x}&y={y}&z={z}", {
+        subdomains: ["0", "1", "2", "3"],
+        maxZoom: 20,
+        attribution: '&copy; Google Maps'
+      });
 
-    const camadaGoogleRuas = L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
-      subdomains: ["0", "1", "2", "3"],
-      maxZoom: 20,
-      attribution: '&copy; Google Maps'
-    });
+      // Camada Google Maps Ruas
+      const camadaGoogleRuas = L.tileLayer("https://mt{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}", {
+        subdomains: ["0", "1", "2", "3"],
+        maxZoom: 20,
+        attribution: '&copy; Google Maps'
+      });
 
-    // Inicia com o Satélite Recente do Google
-    camadaGoogleHibrido.addTo(mapa);
+      // Camada OpenStreetMap Global (Segurança de conexão 100%)
+      const camadaOSM = L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+        maxZoom: 19,
+        attribution: '&copy; OpenStreetMap'
+      });
 
-    // Seletor apenas com opções oficiais do Google
-    const camadasGoogle = {
-      "🛰️ Google Satélite": camadaGoogleHibrido,
-      "🗺️ Google Ruas": camadaGoogleRuas,
-    };
-    L.control.layers(camadasGoogle, null, { position: "topright" }).addTo(mapa);
+      // Inicia com o Satélite Oficial do Google
+      camadaGoogleHibrido.addTo(mapa);
 
-    // Garantia de estabilidade: se a camada satélite oscilar, alterna suavemente para a camada Google Ruas
-    camadaGoogleHibrido.on("tileerror", function() {
-      if (mapa && !mapa.hasLayer(camadaGoogleRuas)) {
-        camadaGoogleRuas.addTo(mapa);
-      }
-    });
+      const camadasBase = {
+        "🛰️ Google Satélite (Híbrido)": camadaGoogleHibrido,
+        "🗺️ Google Ruas": camadaGoogleRuas,
+        "🌍 OpenStreetMap Global": camadaOSM
+      };
+      L.control.layers(camadasBase, null, { position: "topright" }).addTo(mapa);
 
-    camadaMarcadores = L.layerGroup().addTo(mapa);
+      // Fallback automático caso haja bloqueio ou lentidão no satélite
+      let errosSat = 0;
+      camadaGoogleHibrido.on("tileerror", function () {
+        errosSat++;
+        if (errosSat >= 4 && mapa && !mapa.hasLayer(camadaGoogleRuas) && !mapa.hasLayer(camadaOSM)) {
+          camadaGoogleRuas.addTo(mapa);
+        }
+      });
 
-    mapa.on("click", function (evento) {
-      if (!modoAdicionar) return;
-      modoAdicionar = false;
+      camadaMarcadores = L.layerGroup().addTo(mapa);
+
+      mapa.on("click", function (evento) {
+        if (!modoAdicionar) return;
+        modoAdicionar = false;
+        atualizarAcoesMapa();
+        tocarSomPonto();
+        abrirFormPonto(evento.latlng);
+      });
+
+      atualizarDicaMapa();
       atualizarAcoesMapa();
-      tocarSomPonto();
-      abrirFormPonto(evento.latlng);
-    });
+      desenharMarcadores();
 
-    atualizarDicaMapa();
-    atualizarAcoesMapa();
-    desenharMarcadores();
-
-    // Múltiplos invalidates para eliminar o bug de tiles cinzas / mapa desalinhado
-    requestAnimationFrame(function () {
-      if (mapa) mapa.invalidateSize();
-    });
-    setTimeout(function () {
-      if (mapa) mapa.invalidateSize();
-    }, 100);
-    setTimeout(function () {
-      if (mapa) mapa.invalidateSize();
-    }, 350);
+      // Múltiplos updates de tamanho para eliminar 100% de qualquer bug de tile cinza ou tela branca
+      requestAnimationFrame(function () {
+        if (mapa) mapa.invalidateSize();
+      });
+      setTimeout(function () {
+        if (mapa) mapa.invalidateSize();
+      }, 70);
+      setTimeout(function () {
+        if (mapa) mapa.invalidateSize();
+      }, 200);
+      setTimeout(function () {
+        if (mapa) mapa.invalidateSize();
+      }, 450);
+    } catch (err) {
+      console.error("Erro ao inicializar Leaflet:", err);
+    }
   }
 
   function destruirMapa() {
@@ -3566,9 +3655,11 @@ function podeEditar() {
     return null;
   }
 
-  function renderConteudo() {
-    const idPost = rotaPostAtual();
+    function renderConteudo() {
+    const conteudo = document.getElementById("conteudo");
+    if (!conteudo) return;
 
+    const idPost = rotaPostAtual();
     if (idPost) {
       destruirMapa();
       abaAtiva = "blog";
@@ -3576,26 +3667,43 @@ function podeEditar() {
       return;
     }
 
+    let secaoMapa = document.getElementById("secao-mapa-container");
+    let secaoOutros = document.getElementById("secao-outros-container");
+
+    if (!secaoMapa || !secaoOutros) {
+      conteudo.innerHTML =
+        '<div id="secao-mapa-container" class="max-w-[1100px] w-full mx-auto px-4 py-4">' + htmlSecaoMapa() + '</div>' +
+        '<div id="secao-outros-container" class="max-w-[1100px] w-full mx-auto px-4 py-4 hidden"></div>';
+      secaoMapa = document.getElementById("secao-mapa-container");
+      secaoOutros = document.getElementById("secao-outros-container");
+    }
+
     if (abaAtiva === "mapa") {
+      secaoOutros.classList.add("hidden");
+      secaoMapa.classList.remove("hidden");
+
       if (!mapa) {
         renderMapa();
       } else {
         atualizarDicaMapa();
         atualizarAcoesMapa();
         desenharMarcadores();
-        setTimeout(function() { if (mapa) mapa.invalidateSize(); }, 60);
+        mapa.invalidateSize();
+        setTimeout(function () { if (mapa) mapa.invalidateSize(); }, 60);
+        setTimeout(function () { if (mapa) mapa.invalidateSize(); }, 200);
       }
       return;
     }
 
-    destruirMapa();
+    secaoMapa.classList.add("hidden");
+    secaoOutros.classList.remove("hidden");
 
     let html;
     if (abaAtiva === "blog") html = htmlSecaoBlog();
     else if (abaAtiva === "canal") html = htmlSecaoCanal();
     else html = htmlSecaoSobre();
 
-    document.getElementById("conteudo").innerHTML = '<div class="max-w-[1100px] w-full mx-auto px-4 py-4">' + html + "</div>";
+    secaoOutros.innerHTML = html;
   }
 
   function atualizarTudo() {
@@ -3603,7 +3711,7 @@ function podeEditar() {
     renderConteudo();
   }
 
-  let transicionandoAba = false;
+    let transicionandoAba = false;
 
   function trocarAba(aba) {
     if (transicionandoAba) return;
@@ -3624,34 +3732,37 @@ function podeEditar() {
     conteudo.classList.remove("conteudo-entrando");
 
     setTimeout(function () {
-      abaAtiva = aba;
-      if (rotaPostAtual()) {
-        window.location.hash = "#/";
-      }
-      renderCabecalho(aba);
-      renderConteudo();
-      window.scrollTo({ top: 0, behavior: "smooth" });
-
-      requestAnimationFrame(function () {
-        conteudo.classList.remove("conteudo-saindo");
-        conteudo.classList.add("conteudo-entrando");
-        transicionandoAba = false;
-        if (aba === "mapa" && mapa) {
-          setTimeout(function () {
-            mapa.invalidateSize();
-          }, 80);
+      try {
+        abaAtiva = aba;
+        if (rotaPostAtual()) {
+          window.location.hash = "#/";
         }
-      });
-    }, 180);
+        renderCabecalho(aba);
+        renderConteudo();
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      } catch (err) {
+        console.error("Erro na transição de aba:", err);
+      } finally {
+        requestAnimationFrame(function () {
+          conteudo.classList.remove("conteudo-saindo");
+          conteudo.classList.add("conteudo-entrando");
+          transicionandoAba = false;
+          if (aba === "mapa" && mapa) {
+            mapa.invalidateSize();
+            setTimeout(function () { if (mapa) mapa.invalidateSize(); }, 60);
+            setTimeout(function () { if (mapa) mapa.invalidateSize(); }, 200);
+          }
+        });
+      }
+    }, 140);
   }
 
   function irParaBlog() {
     trocarAba("blog");
   }
 
-  function navegar() {
+    function navegar() {
     atualizarTudo();
-  iniciarAnimacaoEntrada();
     window.scrollTo(0, 0);
   }
 
@@ -3859,7 +3970,10 @@ function podeEditar() {
   /* ---------------------------------------------------------------------------
      16.5. Animação de Entrada (Splash Screen)
      --------------------------------------------------------------------------- */
+    let animacaoIntroExecutada = false;
   function iniciarAnimacaoEntrada() {
+    if (animacaoIntroExecutada) return;
+    animacaoIntroExecutada = true;
     const splash = document.createElement("div");
     splash.id = "splash-intro";
     splash.className = "fixed inset-0 z-[9999] flex flex-col items-center justify-center bg-[#07172c] bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-[#0d2b52] via-[#07172c] to-[#040d1a] text-white select-none cursor-pointer";
@@ -4008,7 +4122,7 @@ function podeEditar() {
       (function () { return false; }["constructor"]("debugger")());
       const depois = Date.now();
       // Se demorou mais de 100ms, o DevTools está aberto pausando o script
-      if (depois - antes > 100) {
+      if (depois - antes > 800) {
         if (perfil === "moderador") {
           fazerLogout();
         }
