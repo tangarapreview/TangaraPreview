@@ -1,7 +1,17 @@
 {
-  "versao": 1793220768576,
-  "atualizadoEm": "2026-10-28T20:52:48.576Z",
+  "versao": 1793267687163,
+  "atualizadoEm": "2026-10-29T09:54:47.163Z",
   "pontos": [
+    {
+      "id": "ponto-mvtda323yjg6",
+      "lat": -6.198619966859521,
+      "lng": -35.80233792184836,
+      "titulo": "Dave",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    },
     {
       "id": "ponto-mvsl97pbdtbt",
       "lat": -6.2002893651922495,
