@@ -328,6 +328,7 @@
     map: '<path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/>',
     newspaper: '<path d="M4 22h16a2 2 0 0 0 2-2V4a2 2 0 0 0-2-2H8a2 2 0 0 0-2 2v16a2 2 0 0 1-2 2Zm0 0a2 2 0 0 1-2-2v-9c0-1.1.9-2 2-2h2"/><path d="M18 14h-8"/><path d="M15 18h-5"/><path d="M10 6h8v4h-8V6Z"/>',
     tv: '<rect width="20" height="15" x="2" y="7" rx="2" ry="2"/><polyline points="17 2 12 7 7 2"/>',
+    instagram: '<rect width="20" height="20" x="2" y="2" rx="5" ry="5"/><path d="M16 11.37A4 4 0 1 1 12.63 8 4 4 0 0 1 16 11.37z"/><line x1="17.5" x2="17.51" y1="6.5" y2="6.5"/>',
     info: '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>',
     plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
     trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/>',
@@ -378,7 +379,7 @@
   /* ---------------------------------------------------------------------------
      3. Dados
      --------------------------------------------------------------------------- */
-  const CHAVES = { pontos: "tp_pontos", posts: "tp_posts", videos: "tp_videos", perfil: "tp_perfil" };
+  const CHAVES = { pontos: "tp_pontos", posts: "tp_posts", videos: "tp_videos", instagram: "tp_instagram", perfil: "tp_perfil" };
 
   const DEVS_INICIAIS = [
   {
@@ -423,7 +424,8 @@
       "descricao": "Vídeo do canal documentando a estrutura do IERN Campus Tangará",
       "link": "https://www.youtube.com/watch?v=ztuD_VnnF8E"
     }
-  ]
+  ],
+  "instagram": []
 };
 
   function lerArmazenado(chave, padrao) {
@@ -444,7 +446,12 @@
     pontos: lerArmazenado(CHAVES.pontos, CONTEUDO_INICIAL.pontos),
     posts: lerArmazenado(CHAVES.posts, CONTEUDO_INICIAL.posts),
     videos: lerArmazenado(CHAVES.videos, CONTEUDO_INICIAL.videos),
+    instagram: lerArmazenado(CHAVES.instagram, CONTEUDO_INICIAL.instagram || []),
   };
+
+  if (!Array.isArray(dados.instagram)) {
+    dados.instagram = [];
+  }
 
   // Higienização completa da lista de pontos contra valores corrompidos (null, undefined, sem coordenadas)
   if (!Array.isArray(dados.pontos)) {
@@ -524,6 +531,7 @@
         pt: (obj.pontos || []).map(function(p) { return (p.id || "") + ":" + (p.titulo || ""); }),
         ps: (obj.posts || []).map(function(p) { return p.id || ""; }),
         vd: (obj.videos || []).map(function(v) { return v.id || ""; }),
+        ig: (obj.instagram || []).map(function(i) { return (i.id || "") + ":" + (i.titulo || ""); }),
         v: obj.versao || 0
       });
     } catch (e) {
@@ -542,7 +550,8 @@
             atualizadoEm: dados.atualizadoEm || new Date().toISOString(),
             pontos: dados.pontos || [],
             posts: dados.posts || [],
-            videos: dados.videos || []
+            videos: dados.videos || [],
+            instagram: dados.instagram || []
           }
         });
       }
@@ -580,6 +589,7 @@
     dados.pontos = Array.isArray(novosDados.pontos) ? novosDados.pontos : [];
     dados.posts = Array.isArray(novosDados.posts) ? novosDados.posts : [];
     dados.videos = Array.isArray(novosDados.videos) ? novosDados.videos : [];
+    dados.instagram = Array.isArray(novosDados.instagram) ? novosDados.instagram : [];
     dados.versao = versaoNuvem || versaoAtual || Date.now();
     _versaoLocal = dados.versao;
 
@@ -593,6 +603,7 @@
       localStorage.setItem(CHAVES.pontos, JSON.stringify(dados.pontos));
       localStorage.setItem(CHAVES.posts, JSON.stringify(dados.posts));
       localStorage.setItem(CHAVES.videos, JSON.stringify(dados.videos));
+      localStorage.setItem(CHAVES.instagram, JSON.stringify(dados.instagram));
     } catch (e) {}
 
     // ATUALIZAÇÃO VISUAL IMEDIATA NA TELA DO USUÁRIO (MAPA, BLOG OU CANAL)
@@ -608,8 +619,8 @@
     if (fonte === "nuvem" || fonte === "aba") {
       tocarSomSucesso();
       let msg = "⚡ Sincronizado em tempo real!";
-      if (dados.pontos.length > 0 || dados.posts.length > 0 || dados.videos.length > 0) {
-        msg = "⚡ Conteúdo atualizado em tempo real! (" + dados.pontos.length + " pontos • " + dados.posts.length + " posts • " + dados.videos.length + " vídeos)";
+      if (dados.pontos.length > 0 || dados.posts.length > 0 || dados.videos.length > 0 || (dados.instagram && dados.instagram.length > 0)) {
+        msg = "⚡ Conteúdo atualizado em tempo real! (" + dados.pontos.length + " pontos • " + dados.posts.length + " posts • " + dados.videos.length + " vídeos • " + (dados.instagram ? dados.instagram.length : 0) + " Instagram)";
       }
       mostrarNotificacaoToast(msg);
     }
@@ -738,7 +749,8 @@
     const conteudoAtualizado = {
       pontos: Array.isArray(dados.pontos) ? dados.pontos : [],
       posts: Array.isArray(dados.posts) ? dados.posts : [],
-      videos: Array.isArray(dados.videos) ? dados.videos : []
+      videos: Array.isArray(dados.videos) ? dados.videos : [],
+      instagram: Array.isArray(dados.instagram) ? dados.instagram : []
     };
     const devsAtuais = obterDevsCadastrados();
 
@@ -784,7 +796,8 @@
         atualizadoEm: dados.atualizadoEm || new Date().toISOString(),
         pontos: Array.isArray(dados.pontos) ? dados.pontos : [],
         posts: Array.isArray(dados.posts) ? dados.posts : [],
-        videos: Array.isArray(dados.videos) ? dados.videos : []
+        videos: Array.isArray(dados.videos) ? dados.videos : [],
+        instagram: Array.isArray(dados.instagram) ? dados.instagram : []
       };
 
       const textoJson = JSON.stringify(objetoNuvem, null, 2);
@@ -1988,7 +2001,8 @@ function podeEditar() {
       const conteudoAtualizado = {
         pontos: dados.pontos,
         posts: dados.posts,
-        videos: dados.videos
+        videos: dados.videos,
+        instagram: dados.instagram || []
       };
       const devsAtuais = obterDevsCadastrados();
 
@@ -2028,6 +2042,7 @@ function podeEditar() {
         pontos: dados.pontos,
         posts: dados.posts,
         videos: dados.videos,
+        instagram: dados.instagram || [],
         desenvolvedores: obterDevsCadastrados()
       };
       const blob = new Blob([JSON.stringify(backup, null, 2)], { type: "application/json;charset=utf-8" });
@@ -2068,6 +2083,10 @@ function podeEditar() {
         if (Array.isArray(importado.videos)) {
           dados.videos = importado.videos;
           salvarDados("videos");
+        }
+        if (Array.isArray(importado.instagram)) {
+          dados.instagram = importado.instagram;
+          salvarDados("instagram");
         }
         if (Array.isArray(importado.desenvolvedores)) {
           salvarDevsCadastrados(importado.desenvolvedores);
@@ -2473,9 +2492,11 @@ function podeEditar() {
       dados.pontos = JSON.parse(JSON.stringify(CONTEUDO_INICIAL.pontos));
       dados.posts = JSON.parse(JSON.stringify(CONTEUDO_INICIAL.posts));
       dados.videos = JSON.parse(JSON.stringify(CONTEUDO_INICIAL.videos));
+      dados.instagram = JSON.parse(JSON.stringify(CONTEUDO_INICIAL.instagram || []));
       salvarDados("pontos");
       salvarDados("posts");
       salvarDados("videos");
+      salvarDados("instagram");
       tocarSomSucesso();
       fecharModal();
       mostrarNotificacaoToast("Dados oficiais do projeto do IERN restaurados com sucesso!");
@@ -2779,7 +2800,7 @@ function podeEditar() {
         shortcode: shortcode,
         ehReel: ehReel,
         embedUrl: "https://www.instagram.com/p/" + shortcode + "/embed/?cr=1&v=14&wp=540&rd=1",
-        urlOriginal: "https://www.instagram.com/p/" + shortcode + "/"
+        urlOriginal: (ehReel ? "https://www.instagram.com/reel/" : "https://www.instagram.com/p/") + shortcode + "/"
       };
     }
     return null;
@@ -2949,6 +2970,7 @@ function podeEditar() {
     { id: "mapa", label: "Mapa", icone: "map" },
     { id: "blog", label: "Blog", icone: "newspaper" },
     { id: "canal", label: "Canal", icone: "tv" },
+    { id: "instagram", label: "Instagram", icone: "instagram" },
     { id: "sobre", label: "Sobre nós", icone: "info" },
   ];
 
@@ -3987,6 +4009,246 @@ function podeEditar() {
     renderConteudo();
   }
 
+
+  /* ---------------------------------------------------------------------------
+     11.5. Instagram (Reels e Postagens)
+     --------------------------------------------------------------------------- */
+  function htmlSecaoInstagram() {
+    let lista;
+
+    if (!dados.instagram || !dados.instagram.length) {
+      lista =
+        '<div class="bg-white p-8 sm:p-12 rounded-2xl shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-black/5 text-center flex flex-col items-center justify-center py-12">' +
+          '<div class="w-20 h-20 rounded-3xl bg-gradient-to-tr from-[#f09433] via-[#e6683c] via-[#dc2743] via-[#cc2366] to-[#bc1888] flex items-center justify-center text-white shadow-lg mb-4">' +
+            icone("instagram", "w-10 h-10") +
+          '</div>' +
+          '<h3 class="text-xl font-bold text-[#0d2b52] mb-1.5">Nenhuma publicação do Instagram ainda</h3>' +
+          '<p class="text-sm text-gray-500 max-w-md mx-auto mb-5 leading-relaxed">' +
+            (podeEditar()
+              ? 'Adicione os Reels verticais e postagens de fotos de Tangará (RN) para ficarem disponíveis a todos os visitantes em tempo real.'
+              : 'As publicações e Reels oficiais do Instagram aparecerão aqui em breve.') +
+          '</p>' +
+          (podeEditar()
+            ? '<button type="button" data-acao="novo-instagram" class="inline-flex items-center gap-2 px-6 py-3 rounded-xl bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-95 text-white font-bold text-sm shadow-md transition-all transform hover:-translate-y-0.5">' +
+                icone("plus", "w-5 h-5") + 'Adicionar primeiro Reel / Post' +
+              '</button>'
+            : '') +
+        '</div>';
+    } else {
+      lista =
+        '<div class="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3">' +
+        dados.instagram.map(function (item) {
+          const igInfo = extrairInstagramInfo(item.link);
+          const linkDireto = igInfo ? igInfo.urlOriginal : (item.link || "");
+          const ehReel = (typeof item.ehReel === "boolean") ? item.ehReel : (igInfo ? igInfo.ehReel : (item.link && (item.link.indexOf("/reel/") !== -1 || item.link.indexOf("/reels/") !== -1)));
+          const embedUrl = igInfo ? igInfo.embedUrl : (item.embedUrl || item.link);
+
+          return (
+            '<div class="bg-white rounded-2xl overflow-hidden shadow-[0_4px_16px_rgba(0,0,0,0.08)] hover:shadow-[0_8px_24px_rgba(0,0,0,0.14)] border border-black/5 transition-all flex flex-col group">' +
+              // Cabeçalho do Card
+              '<div class="px-4 py-3 border-b border-black/5 flex items-center justify-between gap-2 bg-gradient-to-r from-gray-50/80 to-white">' +
+                '<div class="flex items-center gap-2">' +
+                  '<span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-white shadow-sm ' +
+                    (ehReel
+                      ? 'bg-gradient-to-r from-[#833ab4] to-[#fd1d1d]'
+                      : 'bg-gradient-to-r from-[#fd1d1d] to-[#fcb045]') +
+                  '">' +
+                    icone("instagram", "w-3.5 h-3.5") +
+                    (ehReel ? 'Reel' : 'Post') +
+                  '</span>' +
+                  (item.data ? '<span class="text-xs text-gray-400">' + new Date(item.data).toLocaleDateString("pt-BR") + '</span>' : '') +
+                '</div>' +
+                (podeEditar()
+                  ? '<button type="button" data-acao="instagram-remover" data-id="' + escapar(item.id) + '" aria-label="Remover ' + escapar(item.titulo) + '" class="w-7 h-7 rounded-full bg-red-50 hover:bg-red-500 text-red-600 hover:text-white flex items-center justify-center transition-colors shadow-sm">' + icone("x", "w-4 h-4") + '</button>'
+                  : '') +
+              '</div>' +
+
+              // Área de Incorporação perfeitamente dimensionada para Reels (9:16) ou Posts (4:5 / quadrado)
+              '<div class="relative bg-black flex items-center justify-center w-full ' + (ehReel ? 'aspect-[9/16] max-h-[580px]' : 'min-h-[460px] aspect-[4/5]') + '">' +
+                '<iframe class="w-full h-full border-0" src="' + escapar(embedUrl) + '" title="' + escapar(item.titulo) + '" frameborder="0" scrolling="no" allowtransparency="true" allow="encrypted-media"></iframe>' +
+              '</div>' +
+
+              // Informações e Ações
+              '<div class="p-4 flex-1 flex flex-col justify-between bg-white">' +
+                '<div class="mb-3">' +
+                  '<h3 class="text-[#0d2b52] font-bold text-base leading-snug mb-1 line-clamp-2">' + escapar(item.titulo) + '</h3>' +
+                  (item.descricao ? '<p class="text-xs text-gray-600 leading-relaxed line-clamp-2">' + escapar(item.descricao) + '</p>' : '') +
+                '</div>' +
+                '<div class="pt-3 border-t border-gray-100 flex items-center justify-between gap-2 mt-auto">' +
+                  '<a href="' + escapar(linkDireto) + '" target="_blank" rel="noopener noreferrer" onclick="tocarSomClique()" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-95 text-white text-xs font-bold shadow-sm transition-all">' +
+                    icone("instagram", "w-3.5 h-3.5") + 'Ver no Instagram ↗' +
+                  '</a>' +
+                  '<button type="button" data-acao="copiar-link-video" data-link="' + escapar(linkDireto) + '" class="inline-flex items-center gap-1 text-xs text-gray-500 hover:text-[#0d2b52] font-semibold hover:underline">' +
+                    icone("link", "w-3 h-3") + 'Copiar link' +
+                  '</button>' +
+                '</div>' +
+              '</div>' +
+            '</div>'
+          );
+        }).join("") +
+        '</div>';
+    }
+
+    return (
+      '<section class="space-y-5">' +
+        '<div class="flex flex-wrap items-center justify-between gap-3 my-2">' +
+          '<div class="flex items-center gap-3">' +
+            '<div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-[#f09433] via-[#e6683c] via-[#dc2743] via-[#cc2366] to-[#bc1888] flex items-center justify-center text-white shadow-md">' +
+              icone("instagram", "w-6 h-6") +
+            '</div>' +
+            '<div>' +
+              '<h2 class="text-[#0d2b52] text-2xl font-black tracking-tight">Instagram</h2>' +
+              '<p class="text-xs text-gray-500">Reels verticais, fotos e publicações de Tangará RN</p>' +
+            '</div>' +
+          '</div>' +
+          (podeEditar()
+            ? '<button type="button" data-acao="novo-instagram" class="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-95 text-white text-sm font-bold shadow-md transition-all scale-100 hover:scale-[1.02]">' +
+                icone("plus", "w-4 h-4") + 'Adicionar publicação' +
+              '</button>'
+            : '') +
+        '</div>' +
+
+        // Banner informativo com identidade visual do Instagram
+        '<div class="bg-gradient-to-r from-[#833ab4]/10 via-[#fd1d1d]/5 to-[#fcb045]/10 p-5 rounded-2xl border border-[#e1306c]/20 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">' +
+          '<div class="space-y-1">' +
+            '<h3 class="text-[#0d2b52] font-bold text-sm sm:text-base flex items-center gap-2">' +
+              '<span>Tangará Preview no Instagram</span>' +
+              '<span class="bg-gradient-to-r from-[#833ab4] to-[#e1306c] text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">Oficial</span>' +
+            '</h3>' +
+            '<p class="text-xs text-gray-600 max-w-xl leading-relaxed">' +
+              (podeEditar()
+                ? 'Aqui você pode cadastrar todos os Reels e postagens do Instagram. O player vertical mantém o formato oficial e suporte a som, reprodução e comentários.'
+                : 'Acompanhe nossa cobertura de Tangará com Reels rápidos, novidades do IERN, fotos de eventos e atrativos turísticos.') +
+            '</p>' +
+          '</div>' +
+          '<a href="https://www.instagram.com/" target="_blank" rel="noopener noreferrer" onclick="tocarSomClique()" class="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-white hover:bg-gray-50 text-[#0d2b52] text-xs font-bold border border-gray-200 shadow-sm hover:shadow transition-all shrink-0">' +
+            icone("instagram", "w-4 h-4 text-[#e1306c]") + 'Abrir perfil @' +
+          '</a>' +
+        '</div>' +
+
+        lista +
+      '</section>'
+    );
+  }
+
+  function abrirFormInstagram() {
+    if (!podeEditar()) {
+      mostrarNotificacaoToast("Apenas moderadores e desenvolvedores autorizados podem adicionar publicações do Instagram.");
+      return;
+    }
+    const corpo =
+      '<div class="space-y-5">' +
+        '<div class="space-y-1.5">' +
+          '<label class="' + CLS_LABEL + '" for="ig-titulo">Título *</label>' +
+          '<input id="ig-titulo" class="' + CLS_INPUT + '" placeholder="Ex.: Reel: Conhecendo o IERN Tangará" />' +
+        '</div>' +
+        '<div class="space-y-1.5">' +
+          '<label class="' + CLS_LABEL + '" for="ig-link">Link do Instagram (Reel ou Postagem) *</label>' +
+          '<textarea id="ig-link" rows="3" class="' + CLS_TEXTAREA + '" placeholder="https://www.instagram.com/reel/C... ou https://www.instagram.com/p/C..."></textarea>' +
+          '<p class="text-xs text-[#121212]/60 mt-1">💡 Aceita links de <strong>Reels</strong> (verticais), <strong>Postagens</strong> de fotos ou códigos &lt;iframe&gt;. O player interativo oficial carrega de forma limpa.</p>' +
+        '</div>' +
+        '<div class="space-y-1.5">' +
+          '<label class="' + CLS_LABEL + '" for="ig-descricao">Descrição ou Legenda (opcional)</label>' +
+          '<textarea id="ig-descricao" rows="2" class="' + CLS_TEXTAREA + '" placeholder="Uma breve descrição sobre a publicação"></textarea>' +
+        '</div>' +
+        '<p id="ig-erro" class="hidden text-xs text-[#d43a3a] font-medium"></p>' +
+      '</div>';
+
+    abrirModal({
+      titulo: "Nova publicação do Instagram",
+      subtitulo: "Incorpore um Reel ou postagem oficial",
+      corpoHtml: corpo,
+      rodapeHtml: rodapeModal(
+        '<button type="button" data-acao="instagram-publicar" id="ig-publicar" class="px-5 py-2.5 rounded-lg bg-gradient-to-r from-[#833ab4] via-[#fd1d1d] to-[#fcb045] hover:opacity-95 text-white font-bold text-sm shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed" disabled>Publicar no Instagram</button>'
+      ),
+    });
+
+    const campoTitulo = document.getElementById("ig-titulo");
+    const campoLink = document.getElementById("ig-link");
+    campoTitulo.focus();
+
+    function atualizarBotao() {
+      const btn = document.getElementById("ig-publicar");
+      if (btn) btn.disabled = !campoTitulo.value.trim() || !campoLink.value.trim();
+    }
+    campoTitulo.addEventListener("input", atualizarBotao);
+    campoLink.addEventListener("input", function () {
+      const erro = document.getElementById("ig-erro");
+      if (erro) erro.classList.add("hidden");
+      atualizarBotao();
+    });
+
+    campoLink.addEventListener("keydown", function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const btn = document.getElementById("ig-publicar");
+        if (btn && !btn.disabled) btn.click();
+      }
+    });
+  }
+
+  function publicarInstagram() {
+    if (!podeEditar()) {
+      mostrarNotificacaoToast("Apenas moderadores e desenvolvedores autorizados podem publicar.");
+      return;
+    }
+    const campoTitulo = document.getElementById("ig-titulo");
+    const campoLink = document.getElementById("ig-link");
+    const titulo = campoTitulo ? campoTitulo.value.trim() : "";
+    const entrada = campoLink ? campoLink.value.trim() : "";
+    if (!titulo || !entrada) return;
+
+    const info = extrairInstagramInfo(entrada);
+    if (!info) {
+      const erro = document.getElementById("ig-erro");
+      if (erro) {
+        erro.textContent = "Por favor, insira um link válido do Instagram (ex: instagram.com/reel/... ou instagram.com/p/...).";
+        erro.classList.remove("hidden");
+      }
+      return;
+    }
+
+    const descElem = document.getElementById("ig-descricao");
+
+    if (!Array.isArray(dados.instagram)) {
+      dados.instagram = [];
+    }
+
+    dados.instagram.unshift({
+      id: novoId("ig"),
+      titulo: titulo,
+      descricao: descElem ? descElem.value.trim() : "",
+      link: info.urlOriginal || entrada,
+      embedUrl: info.embedUrl,
+      ehReel: info.ehReel,
+      data: new Date().toISOString()
+    });
+
+    salvarDados("instagram");
+    tocarSomSucesso();
+    fecharModal();
+    renderConteudo();
+  }
+
+  function removerInstagram(id) {
+    if (!podeEditar()) {
+      mostrarNotificacaoToast("Apenas moderadores e desenvolvedores autorizados podem excluir itens do Instagram.");
+      return;
+    }
+    const item = (dados.instagram || []).find(function (x) {
+      return x.id === id;
+    });
+    if (!item) return;
+    if (!window.confirm('Remover a publicação "' + item.titulo + '"?')) return;
+
+    dados.instagram = (dados.instagram || []).filter(function (x) {
+      return x.id !== id;
+    });
+    salvarDados("instagram");
+    tocarSomRemover();
+    renderConteudo();
+  }
+
   /* ---------------------------------------------------------------------------
      12. Sobre nós
      --------------------------------------------------------------------------- */
@@ -4379,6 +4641,7 @@ function podeEditar() {
     let html;
     if (abaAtiva === "blog") html = htmlSecaoBlog();
     else if (abaAtiva === "canal") html = htmlSecaoCanal();
+    else if (abaAtiva === "instagram") html = htmlSecaoInstagram();
     else html = htmlSecaoSobre();
 
     secaoOutros.innerHTML = html;
@@ -4615,6 +4878,10 @@ function podeEditar() {
         break;
 
       /* Canal */
+      case "copiar-link-video":
+        copiarLinkVideo(elemento.dataset.link);
+        break;
+
       case "novo-video":
         abrirFormVideo();
         break;
@@ -4625,6 +4892,19 @@ function podeEditar() {
 
       case "video-canal-remover":
         removerVideoCanal(elemento.dataset.id);
+        break;
+
+      /* Instagram */
+      case "novo-instagram":
+        abrirFormInstagram();
+        break;
+
+      case "instagram-publicar":
+        publicarInstagram();
+        break;
+
+      case "instagram-remover":
+        removerInstagram(elemento.dataset.id);
         break;
     }
   });
