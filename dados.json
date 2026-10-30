@@ -1,9 +1,15 @@
 {
-  "versao": 1793377846901,
-  "atualizadoEm": "2026-10-30T16:30:46.901Z",
+  "versao": 1793380612992,
+  "atualizadoEm": "2026-10-30T17:16:52.992Z",
   "pontos": [],
   "posts": [],
   "videos": [
+    {
+      "id": "video-mvv8ih6npjg3",
+      "titulo": "O que e o Tangará Preview",
+      "descricao": "Em suma, o projeto “Tangará Preview” pretende ser uma iniciativa inovadora ao unir a formação técnica em informática com o estudo geográfico e histórico local. Ao desenvolver uma plataforma interativa e georreferenciada, os estudantes do IERN Tangará não apenas aplicam conhecimentos prática de tecnologia, mas também produzem um material valioso de valorização territorial e difusão de conhecimento para a comunidade, unindo educação, cidadania e inovação tecnológica.",
+      "link": "https://www.instagram.com/p/DdHxk_DsuPz/embed/?cr=1&v=14&wp=540&rd=1"
+    },
     {
       "id": "video-mvqlfpxq3hwl",
       "titulo": "Mostrando locais da cidade do pastel Tangará RN",
