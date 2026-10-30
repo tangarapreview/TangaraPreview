@@ -2757,12 +2757,46 @@ function podeEditar() {
     return null;
   }
 
-  // Sistema de incorporação universal sem erro de player
+  // Identificador de publicações e Reels do Instagram
+  function extrairInstagramInfo(entrada) {
+    if (!entrada) return null;
+    let str = String(entrada).trim();
+
+    // Se colou código <iframe> ou <blockquote> completo, extrai o src ou data-instgrm-permalink
+    if (str.indexOf("<iframe") !== -1 || str.indexOf("src=") !== -1) {
+      const matchSrc = str.match(/src=["']([^"']+)["']/i);
+      if (matchSrc && matchSrc[1]) str = matchSrc[1].trim();
+    } else if (str.indexOf("data-instgrm-permalink=") !== -1) {
+      const matchPerm = str.match(/data-instgrm-permalink=["']([^"']+)["']/i);
+      if (matchPerm && matchPerm[1]) str = matchPerm[1].trim();
+    }
+
+    const matchIg = str.match(/instagram\.com\/(?:p|reel|reels|tv)\/([a-zA-Z0-9_-]+)/i);
+    if (matchIg && matchIg[1]) {
+      const shortcode = matchIg[1];
+      const ehReel = str.toLowerCase().indexOf("/reel/") !== -1 || str.toLowerCase().indexOf("/reels/") !== -1;
+      return {
+        shortcode: shortcode,
+        ehReel: ehReel,
+        embedUrl: "https://www.instagram.com/p/" + shortcode + "/embed/?cr=1&v=14&wp=540&rd=1",
+        urlOriginal: "https://www.instagram.com/p/" + shortcode + "/"
+      };
+    }
+    return null;
+  }
+
+  // Sistema de incorporação universal sem erro de player (YouTube + Instagram Reels/Posts + Vimeo)
   function extrairEmbedUrl(entrada) {
     if (!entrada) return null;
     let str = String(entrada).trim();
 
-    // 1. Se colou código <iframe> completo, extrai o link interno
+    // 1. Se for Instagram (Reel ou Postagem)
+    const ig = extrairInstagramInfo(str);
+    if (ig) {
+      return ig.embedUrl;
+    }
+
+    // 2. Se colou código <iframe> completo, extrai o link interno
     if (str.indexOf("<iframe") !== -1 || str.indexOf("src=") !== -1) {
       const matchSrc = str.match(/src=["']([^"']+)["']/i);
       if (matchSrc && matchSrc[1]) {
@@ -2770,19 +2804,19 @@ function podeEditar() {
       }
     }
 
-    // 2. Se for YouTube, usa youtube-nocookie.com oficial com parâmetros de compatibilidade
+    // 3. Se for YouTube, usa youtube-nocookie.com oficial com parâmetros de compatibilidade
     const idYt = extrairYouTubeId(str);
     if (idYt) {
       return "https://www.youtube-nocookie.com/embed/" + idYt + "?rel=0&enablejsapi=1";
     }
 
-    // 3. Suporte ao Vimeo
+    // 4. Suporte ao Vimeo
     const matchVimeo = str.match(/(?:vimeo\.com\/(?:video\/)?|player\.vimeo\.com\/video\/)(\d+)/i);
     if (matchVimeo && matchVimeo[1]) {
       return "https://player.vimeo.com/video/" + matchVimeo[1];
     }
 
-    // 4. Se já for uma URL HTTPS de incorporação
+    // 5. Se já for uma URL HTTPS de incorporação
     if (/^https?:\/\//i.test(str)) {
       return str;
     }
@@ -2791,6 +2825,10 @@ function podeEditar() {
   }
 
   function linkDiretoVideo(entrada) {
+    const ig = extrairInstagramInfo(entrada);
+    if (ig) {
+      return ig.urlOriginal;
+    }
     const idYt = extrairYouTubeId(entrada);
     if (idYt) {
       return "https://www.youtube.com/watch?v=" + idYt;
@@ -3216,10 +3254,10 @@ function podeEditar() {
           '<p class="' + CLS_TITULO_SECAO + '">Vídeos (Incorporação / YouTube)</p>' +
           '<div class="space-y-3">' +
             '<div class="flex gap-2">' +
-              '<input id="video-url" class="' + CLS_INPUT + '" placeholder="Código <iframe> ou link do vídeo" />' +
+              '<input id="video-url" class="' + CLS_INPUT + '" placeholder="Link do YouTube, Instagram ou código <iframe>" />' +
               '<button type="button" data-acao="video-add" aria-label="Adicionar vídeo" class="' + CLS_BTN_CONTORNO + '">' + icone("plus", "w-4 h-4") + "</button>" +
             "</div>" +
-            '<p class="text-[11px] text-[#121212]/60">Aceita código de incorporação (&lt;iframe&gt;) ou link normal.</p>' +
+            '<p class="text-[11px] text-[#121212]/60">Aceita links do YouTube, Instagram (Reel/Post) ou código de incorporação.</p>' +
             '<p id="video-ponto-erro" class="hidden text-xs text-[#d43a3a]"></p>' +
             '<ul id="video-lista" class="space-y-2"></ul>' +
           "</div>" +
@@ -3734,8 +3772,23 @@ function podeEditar() {
      --------------------------------------------------------------------------- */
   // Reprodutor de vídeo 100% no modo iframe embutido
   function renderCardVideoPlayer(urlVideo, tituloVideo) {
-    const idYt = extrairYouTubeId(urlVideo);
     const tituloEsc = escapar(tituloVideo || "Vídeo");
+    const igInfo = extrairInstagramInfo(urlVideo);
+
+    // 1. Suporte exclusivo para Instagram (Reels e Postagens)
+    if (igInfo) {
+      const estiloAspecto = igInfo.ehReel
+        ? "aspect-[9/16] max-h-[580px] mx-auto w-full"
+        : "min-h-[460px] aspect-[4/5] mx-auto w-full";
+      return (
+        '<div class="relative rounded-xl overflow-hidden bg-black shadow-md ' + estiloAspecto + '">' +
+          '<iframe class="w-full h-full border-0 rounded-xl" src="' + escapar(igInfo.embedUrl) + '" title="' + tituloEsc + '" frameborder="0" scrolling="no" allowtransparency="true" allow="encrypted-media"></iframe>' +
+        '</div>'
+      );
+    }
+
+    // 2. Suporte para YouTube
+    const idYt = extrairYouTubeId(urlVideo);
     let embedUrl = "";
 
     if (idYt) {
@@ -3840,7 +3893,7 @@ function podeEditar() {
         "</div>" +
         '<div class="space-y-1.5">' +
           '<label class="' + CLS_LABEL + '" for="video-link">Código de Incorporação ou Link *</label>' +
-          '<textarea id="video-link" rows="3" class="' + CLS_TEXTAREA + '" placeholder="Cole o código de incorporação <iframe> ou o link do vídeo"></textarea>' +
+          '<textarea id="video-link" rows="3" class="' + CLS_TEXTAREA + '" placeholder="Cole o link do YouTube, Instagram (Reel ou Post) ou código <iframe>"></textarea>' +
           '<p class="text-xs text-[#121212]/60 mt-1">💡 Aceita tanto o código <strong>&lt;iframe&gt;</strong> (do botão Compartilhar &rarr; Incorporar) quanto o link normal do YouTube.</p>' +
         "</div>" +
         '<div class="space-y-1.5">' +
@@ -3895,7 +3948,7 @@ function podeEditar() {
     const urlEmbed = extrairEmbedUrl(entrada);
     if (!urlEmbed) {
       const erro = document.getElementById("video-erro");
-      erro.textContent = "Informe um código de incorporação <iframe> ou link válido do YouTube.";
+      erro.textContent = "Informe um link válido do YouTube, Instagram (Reel/Post) ou código <iframe>.";
       erro.classList.remove("hidden");
       return;
     }
