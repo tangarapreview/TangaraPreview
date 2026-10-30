@@ -1,7 +1,38 @@
 {
-  "versao": 1793268075807,
-  "atualizadoEm": "2026-10-29T10:01:15.807Z",
-  "pontos": [],
+  "versao": 1793377119793,
+  "atualizadoEm": "2026-10-30T16:18:00Z",
+  "pontos": [
+    {
+      "id": "ponto-mvtdely1acg4",
+      "lat": -6.208411497483646,
+      "lng": -35.77579596913864,
+      "titulo": "Hdhdhdhdh",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    },
+    {
+      "id": "ponto-mvtda323yjg6",
+      "lat": -6.198619966859521,
+      "lng": -35.80233792184836,
+      "titulo": "Dave",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    },
+    {
+      "id": "ponto-mvsl97pbdtbt",
+      "lat": -6.2002893651922495,
+      "lng": -35.80050458757087,
+      "titulo": "Tangara",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    }
+  ],
   "posts": [
     {
       "id": "post-mvslcgg0q74y",
