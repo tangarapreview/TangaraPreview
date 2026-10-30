@@ -409,15 +409,7 @@
 
     const CONTEUDO_INICIAL = {
   "pontos": [],
-  "posts": [
-    {
-      "id": "post-mvslcgg0q74y",
-      "titulo": "Hrududjdjdjdjd",
-      "descricao": "",
-      "banner": "",
-      "conteudo": "<p><br></p>"
-    }
-  ],
+  "posts": [],
   "videos": [
     {
       "id": "video-mvqlfpxq3hwl",
@@ -568,7 +560,7 @@
     if (fonte === "nuvem") {
       // 1. Se salvamos ou removemos algo localmente há menos de 30 segundos,
       // qualquer resposta da nuvem que tenha versão menor ou igual é REJEITADA.
-      if (Date.now() - _tempoUltimaGravacaoLocal < 30000) {
+      if (Date.now() - _tempoUltimaGravacaoLocal < 1500) {
         if (versaoNuvem <= _versaoLocal) {
           return; // Protege as alterações locais!
         }
@@ -628,7 +620,7 @@
     if (_sincronizandoNuvemAgora) return;
 
     // Não interrompe enquanto o usuário estiver salvando ativamente
-    if (Date.now() - _tempoUltimaGravacaoLocal < 6000) return;
+    if (Date.now() - _tempoUltimaGravacaoLocal < 1000) return;
 
     _sincronizandoNuvemAgora = true;
 
@@ -702,7 +694,7 @@
     // 3. Heartbeat de sincronização em segundo plano a cada 8 segundos
     setInterval(function () {
       sincronizarComNuvem(false);
-    }, 8000);
+    }, 3000);
 
     // 4. Ao alternar entre abas e voltar para o site, sincroniza na hora
     document.addEventListener("visibilitychange", function () {
@@ -944,7 +936,7 @@
     if (_timerAutoSave) clearTimeout(_timerAutoSave);
     _timerAutoSave = setTimeout(function () {
       executarSalvamentoAutomatico(motivo);
-    }, 600);
+    }, 200);
   }
 
   function salvarDados(nome) {
