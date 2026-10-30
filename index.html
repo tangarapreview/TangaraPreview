@@ -1182,6 +1182,7 @@
 
     async function inicializarSessaoSegura() {
     try {
+      await carregarDevsCriptografados();
       const salvoDevCripto = sessionStorage.getItem(CHAVE_DEV_ATIVO) || localStorage.getItem(CHAVE_DEV_ATIVO);
       if (salvoDevCripto) {
         let decifrado = salvoDevCripto;
@@ -1455,7 +1456,7 @@ function podeEditar() {
     btnEntrar.innerHTML = icone("loader", "w-4 h-4 animate-spin") + " Validando...";
 
     try {
-      const devs = obterDevsCadastrados();
+      const devs = (await carregarDevsCriptografados()) || obterDevsCadastrados();
       let devAutenticado = null;
 
       // 1. Verifica se corresponde a um desenvolvedor cadastrado
@@ -1647,7 +1648,7 @@ function podeEditar() {
       };
 
       filtrados.push(novoDev);
-      salvarDevsCadastrados(filtrados);
+      await salvarDevsCadastrados(filtrados);
 
       // Loga automaticamente o novo dev
       tentativasFalhas = 0;
@@ -1933,7 +1934,7 @@ function podeEditar() {
     }
 
     if (btnSalvar) {
-      btnSalvar.addEventListener("click", function () {
+      btnSalvar.addEventListener("click", async function () {
         dev.foto = fotoTemporaria || "";
         devAtivo.foto = dev.foto;
 
@@ -1942,7 +1943,7 @@ function podeEditar() {
         const idx = devs.findIndex(function (d) { return d.id === dev.id || d.usuario === dev.usuario; });
         if (idx !== -1) {
           devs[idx].foto = dev.foto;
-          salvarDevsCadastrados(devs);
+          await salvarDevsCadastrados(devs);
         }
 
         if (localStorage.getItem(CHAVE_DEV_ATIVO)) {
@@ -2203,7 +2204,7 @@ function podeEditar() {
 
     const btnSalvar = document.getElementById("btn-salvar-gh");
     if (btnSalvar) {
-      btnSalvar.addEventListener("click", function () {
+      btnSalvar.addEventListener("click", async function () {
         const repo = document.getElementById("gh-repo").value.trim();
         const branch = document.getElementById("gh-branch").value.trim() || "main";
         const token = document.getElementById("gh-token").value.trim();
@@ -2566,7 +2567,7 @@ function podeEditar() {
           return;
         }
 
-        const devs = obterDevsCadastrados();
+        const devs = (await carregarDevsCriptografados()) || obterDevsCadastrados();
         if (devAtivo && devAtivo.id !== "dev-mestre") {
           const idx = devs.findIndex(function (d) { return d.id === devAtivo.id || d.usuario === devAtivo.usuario; });
           if (idx !== -1) {
