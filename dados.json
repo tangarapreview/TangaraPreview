@@ -1,7 +1,18 @@
 {
-  "versao": 1793384510510,
-  "atualizadoEm": "2026-11-02T11:28:27.003Z",
-  "pontos": [],
+  "versao": 1793618981864,
+  "atualizadoEm": "2026-11-02T11:29:41.864Z",
+  "pontos": [
+    {
+      "id": "ponto-mvz6fjs8qaj3",
+      "lat": -6.199187163549579,
+      "lng": -35.80033299994288,
+      "titulo": "Iern",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    }
+  ],
   "posts": [],
   "videos": [
     {
