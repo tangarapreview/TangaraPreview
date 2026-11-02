@@ -1,28 +1,7 @@
 {
-  "versao": 1793621710849,
-  "atualizadoEm": "2026-11-02T12:15:10.849Z",
-  "pontos": [
-    {
-      "id": "ponto-mvz821hc59sj",
-      "lat": -6.1998818152026995,
-      "lng": -35.808945447206504,
-      "titulo": "Qualquer",
-      "descricao": "",
-      "imagens": [],
-      "videos": [],
-      "links": []
-    },
-    {
-      "id": "ponto-mvz6fjs8qaj3",
-      "lat": -6.199187163549579,
-      "lng": -35.80033299994288,
-      "titulo": "Iern",
-      "descricao": "",
-      "imagens": [],
-      "videos": [],
-      "links": []
-    }
-  ],
+  "versao": 1793630280079,
+  "atualizadoEm": "2026-11-02T14:38:00.079Z",
+  "pontos": [],
   "posts": [],
   "videos": [
     {
