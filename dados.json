@@ -1,7 +1,17 @@
 {
-  "versao": 1793618981864,
-  "atualizadoEm": "2026-11-02T11:29:41.864Z",
+  "versao": 1793621710849,
+  "atualizadoEm": "2026-11-02T12:15:10.849Z",
   "pontos": [
+    {
+      "id": "ponto-mvz821hc59sj",
+      "lat": -6.1998818152026995,
+      "lng": -35.808945447206504,
+      "titulo": "Qualquer",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    },
     {
       "id": "ponto-mvz6fjs8qaj3",
       "lat": -6.199187163549579,
