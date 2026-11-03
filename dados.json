@@ -1,7 +1,18 @@
 {
-  "versao": 1793630563058,
-  "atualizadoEm": "2026-11-02T14:42:43.058Z",
-  "pontos": [],
+  "versao": 1793704555508,
+  "atualizadoEm": "2026-11-03T11:15:55.508Z",
+  "pontos": [
+    {
+      "id": "ponto-mw0ldotw7m9c",
+      "lat": -6.199869476149124,
+      "lng": -35.799818237058865,
+      "titulo": "Hdhdhdudjd",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    }
+  ],
   "posts": [],
   "videos": [
     {
