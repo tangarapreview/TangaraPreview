@@ -1,6 +1,6 @@
 {
-  "versao": 1794347956094,
-  "atualizadoEm": "2026-11-10T21:59:16.094Z",
+  "versao": 1794348056630,
+  "atualizadoEm": "2026-11-10T22:00:56.630Z",
   "pontos": [
     {
       "id": "ponto-mw88e0kxr8tj",
@@ -66,7 +66,15 @@
       "links": []
     }
   ],
-  "posts": [],
+  "posts": [
+    {
+      "id": "post-mwb8i5h18o1g",
+      "titulo": "Teste",
+      "descricao": "",
+      "banner": "",
+      "conteudo": "<p><br></p>"
+    }
+  ],
   "videos": [
     {
       "id": "video-mvqlfpxq3hwl",
