@@ -772,7 +772,22 @@
       "links": []
     }
   ],
-  "posts": [],
+  "posts": [
+    {
+      "id": "post-mwarxik3y5im",
+      "titulo": "Nova foto de perfil",
+      "descricao": "",
+      "banner": "",
+      "conteudo": "<p>Hdkahksk</p>"
+    },
+    {
+      "id": "post-mwargsv3rncv",
+      "titulo": "uytytyut",
+      "descricao": "gghfjyultçiyçoçok",
+      "banner": "",
+      "conteudo": "<p>dhfdhjtukykuiluçoip</p>"
+    }
+  ],
   "videos": [
     {
       "id": "video-mvqlfpxq3hwl",
@@ -1407,7 +1422,7 @@
   const CHAVE_SESSAO_ADMIN = "tangara_preview_sessao_ativa";
   const CHAVE_AUTOSAVE_ATIVO = "tp_autosave_ativo";
   const CHAVE_GITHUB_CONFIG = "tp_github_config";
-  // Código secreto mestre oficial (2010koko2123) hasheado em SHA-256 com salt
+  // Hash de autorização institucional (SHA-256 com salt)
   const HASH_PADRAO_ADMIN = "c7e8d56008d782ac0623cde7298001ca95b0ae622d91219377c4a5a3ef6fc869";
 
     // ===========================================================================
@@ -1416,13 +1431,13 @@
   let _chaveAesCache = null;
   async function obterChaveAES() {
     if (_chaveAesCache) return _chaveAesCache;
-    const encoder = new TextEncoder();
-    // Derivação irreversível de 256 bits a partir do salt e do código mestre
-    const dados = encoder.encode(CRYPTO_SALT + "2010koko2123");
-    const rawKey = await window.crypto.subtle.digest("SHA-256", dados);
+    // Derivação de chave AES-256 a partir do hash institucional sem expor segredos em texto claro
+    const rawBytes = new Uint8Array(
+      HASH_PADRAO_ADMIN.match(/.{1,2}/g).map(function (b) { return parseInt(b, 16); })
+    );
     _chaveAesCache = await window.crypto.subtle.importKey(
       "raw",
-      rawKey,
+      rawBytes,
       { name: "AES-GCM", length: 256 },
       false,
       ["encrypt", "decrypt"]
@@ -2667,6 +2682,11 @@ function podeEditar() {
   }
 
   function abrirPainelDev() {
+    if (!podeEditar()) {
+      abrirModalLogin();
+      mostrarNotificacaoToast("Acesso restrito. Faça login como moderador ou desenvolvedor.");
+      return;
+    }
     fecharModal();
     const devs = obterDevsCadastrados();
 
@@ -2977,7 +2997,7 @@ function podeEditar() {
     }
     atualizarViewLogsEmTempoReal();
   }
-  window.abrirPainelDev = abrirPainelDev;
+  // window.abrirPainelDev protegido (escopo fechado)
 
   // Trava de segurança para restaurar dados originais sem risco de bagunçar o site
   function restaurarConteudoPadrao() {
@@ -5071,6 +5091,30 @@ function podeEditar() {
   /* ---------------------------------------------------------------------------
      13. Página do post
      --------------------------------------------------------------------------- */
+    function sanitizarConteudoHtml(html) {
+    if (!html) return "";
+    try {
+      const parser = new DOMParser();
+      const doc = parser.parseFromString(html, "text/html");
+      const tagsProibidas = doc.querySelectorAll("script, iframe, object, embed, form, base, link, meta");
+      tagsProibidas.forEach(function (el) { el.remove(); });
+      
+      const todosElementos = doc.body.querySelectorAll("*");
+      todosElementos.forEach(function (el) {
+        Array.from(el.attributes).forEach(function (attr) {
+          const nome = attr.name.toLowerCase();
+          const valor = attr.value.toLowerCase().trim();
+          if (nome.startsWith("on") || valor.includes("javascript:") || valor.includes("vbscript:") || valor.includes("data:text/html")) {
+            el.removeAttribute(attr.name);
+          }
+        });
+      });
+      return doc.body.innerHTML;
+    } catch (_) {
+      return escapar(html);
+    }
+  }
+
   function renderPost(id) {
     const post = dados.posts.find(function (item) {
       return item.id === id;
@@ -5093,7 +5137,7 @@ function podeEditar() {
           '<div class="p-5 sm:p-7">' +
             '<h1 class="text-[#0d2b52] font-bold text-2xl sm:text-3xl mb-2">' + escapar(post.titulo) + "</h1>" +
             (post.descricao ? '<p class="text-sm text-[#d43a3a] mb-4">' + escapar(post.descricao) + "</p>" : "") +
-            (post.conteudo ? '<div class="conteudo-post">' + post.conteudo + "</div>" : "") +
+            (post.conteudo ? '<div class="conteudo-post">' + sanitizarConteudoHtml(post.conteudo) + "</div>" : "") +
           "</div>" +
         "</article>";
     }
