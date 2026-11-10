@@ -26,7 +26,7 @@
 
 ---
 
-## 🚀 Funcionalidades e Estrutura do Portal (v3.5)
+## 🚀 Funcionalidades e Estrutura do Portal (v3.6)
 
 O portal é organizado em 5 seções principais de navegação fluida:
 
@@ -87,6 +87,24 @@ flowchart LR
 * **Controle de Acesso Baseado em Papéis**: Visitantes têm acesso somente-leitura; apenas desenvolvedores e moderadores cadastrados possuem permissão para adicionar ou remover conteúdos.
 
 ---
+
+### 6. 📋 Central de Logs & Diagnóstico do Sistema (v3.6)
+* **Monitoramento Ativo no Painel ADM**: Registro cronológico de eventos críticos do sistema:
+  * **Bugs & Erros**: Captura em tempo real de exceções de scripts JS e rejeições assíncronas não tratadas.
+  * **GitHub Sync**: Acompanhamento minucioso da progressão de sincronizações com a API REST do GitHub (obtenção de SHA, status HTTP 200/201/409, envio de commits para a branch `main`).
+  * **Atualizações de Conteúdo**: Rastreamento de salvamentos locais e remotos de pontos, posts do blog, vídeos e postagens do Instagram.
+  * **Mensagens do Sistema**: Autenticação de desenvolvedores, importação/exportação de backups e avisos de sistema.
+* **Filtros e Exportação**: Alternância rápida entre categorias através de badges com contagem em tempo real, botão de limpeza segura e exportação completa do histórico em arquivo `.json`.
+
+### 7. 🔒 Limitação Geográfica Estrita ao Estado do RN (v3.6)
+* O mapa interativo Leaflet conta com limite de contenção espacial georreferenciado (`maxBounds`) calibrado com precisão para os extremos do Rio Grande do Norte:
+  * Sudoeste: latitude `-7.25`, longitude `-38.85` (fronteiras com PB e CE)
+  * Nordeste: latitude `-4.70`, longitude `-34.75` (litoral leste e norte potiguar)
+* **Viscosidade e Zoom Controlado**: Parâmetro `maxBoundsViscosity: 1.0` que impede completamente o usuário de arrastar o mapa para fora do RN, além de trava de zoom mínimo (`minZoom: 8`) que elimina desorientação visual.
+
+### 8. 🔍 Visualizador Lightbox de Imagens Ampliadas (v3.6)
+* **Ampliação com 1 Toque**: Ao tocar ou clicar em qualquer imagem do portal (banners de posts, imagens internas de artigos, fotos de pontos históricos no mapa, etc.), a imagem se expande instantaneamente em um modal/pop-up em tela cheia.
+* **Design e Acessibilidade**: Fundo escuro semitransparente com desfoque (`backdrop-blur-md`), botão de fechamento com suporte à tecla `ESC`, botão de abertura direta do arquivo original e legenda informativa.
 
 ## 🛠️ Tecnologias Utilizadas
 
