@@ -680,6 +680,22 @@
     "usuario": "daniel",
     "hash": "e116265c34aac1a5ab6392d8b352284245f37a200867f3ca8c5df38710a48e0e",
     "dataCadastro": "2026-10-27T11:13:59.474Z"
+  },
+  {
+    "id": "dev-jean",
+    "nome": "Jean Pierry Ribeiro Barbosa",
+    "papel": "Desenvolvedor IERN",
+    "usuario": "jean",
+    "hash": "3c062d410db01bfc04efaaa755ae1448578a3eefedb5c520fa730b8479e44a68",
+    "dataCadastro": "2026-10-27T11:14:00.000Z"
+  },
+  {
+    "id": "dev-jonas",
+    "nome": "Prof. Jonas Lopes de Medeiros",
+    "papel": "Professor Orientador",
+    "usuario": "jonas",
+    "hash": "c8b9b4b0abb1420784443a5e6f575077159ae9fbbc39443a8439c6d1d69a7505",
+    "dataCadastro": "2026-10-27T11:14:00.000Z"
   }
 ];
 
@@ -1398,30 +1414,61 @@
   // Carrega desenvolvedores registrados
     let _cacheDevsDecifrados = null;
   function obterDevsCadastrados() {
-    if (_cacheDevsDecifrados && Array.isArray(_cacheDevsDecifrados)) {
-      return _cacheDevsDecifrados;
-    }
-    try {
-      const salvo = localStorage.getItem(CHAVE_DEVS_LOCAL);
-      if (salvo) {
-        if (salvo.indexOf("ENC:") === 0) {
-          // Descriptografa de forma assíncrona em segundo plano para manter cache
-          descriptografarCofre(salvo).then(function (dec) {
-            if (dec) {
-              try { _cacheDevsDecifrados = JSON.parse(dec); } catch (e) {}
+    let lista = null;
+    if (_cacheDevsDecifrados && Array.isArray(_cacheDevsDecifrados) && _cacheDevsDecifrados.length > 0) {
+      lista = _cacheDevsDecifrados.slice();
+    } else {
+      try {
+        const salvo = localStorage.getItem(CHAVE_DEVS_LOCAL);
+        if (salvo) {
+          if (salvo.indexOf("ENC:") === 0) {
+            descriptografarCofre(salvo).then(function (dec) {
+              if (dec) {
+                try { _cacheDevsDecifrados = JSON.parse(dec); } catch (e) {}
+              }
+            });
+          } else {
+            const parseado = JSON.parse(salvo);
+            if (Array.isArray(parseado) && parseado.length > 0) {
+              lista = parseado;
             }
-          });
-        } else {
-          const parseado = JSON.parse(salvo);
-          if (Array.isArray(parseado) && parseado.length > 0) {
-            _cacheDevsDecifrados = parseado;
-            salvarDevsCadastrados(parseado);
-            return parseado;
           }
         }
-      }
-    } catch (e) {}
-    return (typeof DEVS_INICIAIS !== "undefined" && Array.isArray(DEVS_INICIAIS)) ? DEVS_INICIAIS.slice() : [];
+      } catch (e) {}
+    }
+
+    if (!lista || !Array.isArray(lista) || lista.length === 0) {
+      lista = (typeof DEVS_INICIAIS !== "undefined" && Array.isArray(DEVS_INICIAIS)) ? DEVS_INICIAIS.slice() : [];
+    }
+
+    // GARANTIA TOTAL: Garante que todos os 5 membros oficiais (incluindo Jean Pierry e o orientador Prof. Jonas) estejam na lista
+    if (typeof EQUIPE_IERN_OFICIAL !== "undefined" && Array.isArray(EQUIPE_IERN_OFICIAL)) {
+      EQUIPE_IERN_OFICIAL.forEach(function (membro) {
+        const jaExiste = lista.some(function (d) {
+          return d.id === membro.id || d.nome === membro.nome || (d.usuario && (d.usuario === membro.usuarioPadrao || d.usuario === membro.id));
+        });
+        if (!jaExiste) {
+          const inicial = (typeof DEVS_INICIAIS !== "undefined" && Array.isArray(DEVS_INICIAIS))
+            ? DEVS_INICIAIS.find(function (i) { return i.id === membro.id || i.nome === membro.nome; })
+            : null;
+          if (inicial) {
+            lista.push(inicial);
+          } else {
+            lista.push({
+              id: membro.id,
+              nome: membro.nome,
+              papel: membro.papel,
+              usuario: membro.usuarioPadrao,
+              hash: "3c062d410db01bfc04efaaa755ae1448578a3eefedb5c520fa730b8479e44a68",
+              dataCadastro: new Date().toISOString()
+            });
+          }
+        }
+      });
+    }
+
+    _cacheDevsDecifrados = lista;
+    return lista;
   }
 
   async function carregarDevsCriptografados() {
@@ -1548,9 +1595,35 @@ function podeEditar() {
 
         // ABA 1: ENTRAR
         '<div id="painel-login-entrar" class="' + (aba === "entrar" ? "" : "hidden") + ' space-y-3.5">' +
+          // Seletor Rápido com Cartões dos 5 Integrantes Oficiais
           '<div class="space-y-1.5">' +
-            '<label class="' + CLS_LABEL + '" for="login-usuario">Usuário ou Nome</label>' +
-            '<input id="login-usuario" class="' + CLS_INPUT + '" placeholder="Digite seu nome de usuário" autocomplete="username" />' +
+            '<label class="text-xs font-bold uppercase tracking-wider text-[#0d2b52]/80 flex items-center justify-between">' +
+              '<span>Selecione seu perfil (ou digite abaixo):</span>' +
+              '<span class="text-[10px] font-normal text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">5 contas ativas</span>' +
+            '</label>' +
+            '<div class="grid grid-cols-1 sm:grid-cols-2 gap-1.5" id="seletor-rapido-devs">' +
+              EQUIPE_IERN_OFICIAL.map(function(m) {
+                const devObj = devs.find(function(d){ return d.id === m.id || d.nome === m.nome; }) || m;
+                const ehOrientador = m.papel.indexOf("Orientador") !== -1;
+                return (
+                  '<button type="button" data-login-rapido="' + escapar(m.usuarioPadrao) + '" data-dev-id="' + escapar(m.id) + '" class="btn-dev-card-login flex items-center gap-2 p-2 rounded-xl border border-slate-200 bg-slate-50/70 hover:bg-blue-50/80 hover:border-[#1a5fb4]/40 transition-all text-left group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1a5fb4]">' +
+                    (devObj.foto
+                      ? '<img src="' + escapar(devObj.foto) + '" alt="' + escapar(m.nome) + '" class="w-8 h-8 rounded-full object-cover shrink-0 border border-emerald-400" />'
+                      : '<div class="w-8 h-8 rounded-full flex items-center justify-center font-bold text-xs shrink-0 ' + (ehOrientador ? 'bg-amber-500 text-slate-900' : 'bg-[#0d2b52] text-[#f5c211]') + '">' + escapar(m.nome.charAt(0)) + '</div>') +
+                    '<div class="min-w-0 flex-1">' +
+                      '<p class="text-xs font-bold text-[#0d2b52] truncate group-hover:text-[#1a5fb4]">' + escapar(m.nome) + '</p>' +
+                      '<p class="text-[10px] text-[#121212]/60 truncate font-mono">@' + escapar(m.usuarioPadrao) + (ehOrientador ? ' • Orientador' : '') + '</p>' +
+                    '</div>' +
+                    '<span class="text-[10px] text-emerald-600 font-bold px-1.5 py-0.5 rounded bg-emerald-100/70">Ativo</span>' +
+                  '</button>'
+                );
+              }).join("") +
+            '</div>' +
+          '</div>' +
+
+          '<div class="space-y-1.5 pt-1 border-t border-[#0d2b52]/10">' +
+            '<label class="' + CLS_LABEL + '" for="login-usuario">Usuário ou Nome Selecionado</label>' +
+            '<input id="login-usuario" class="' + CLS_INPUT + '" placeholder="Ex.: jean, jonas, irinel, daniel, yuri ou admin" autocomplete="username" />' +
           '</div>' +
 
           '<div class="space-y-1.5">' +
@@ -1641,6 +1714,28 @@ function podeEditar() {
     const painelCadastrar = document.getElementById("painel-login-cadastrar");
     const btnExecutarLogin = document.getElementById("btn-executar-login");
     const btnExecutarCadastro = document.getElementById("btn-executar-cadastro");
+
+    // Delegação de clique para seleção rápida de integrante
+    const seletorDevsEl = document.getElementById("seletor-rapido-devs");
+    if (seletorDevsEl) {
+      seletorDevsEl.addEventListener("click", function(e) {
+        const btn = e.target.closest("[data-login-rapido]");
+        if (!btn) return;
+        const user = btn.getAttribute("data-login-rapido");
+        const inpUser = document.getElementById("login-usuario");
+        const inpSenha = document.getElementById("login-senha");
+        if (inpUser) {
+          inpUser.value = user;
+        }
+        seletorDevsEl.querySelectorAll(".btn-dev-card-login").forEach(function(b) {
+          b.classList.remove("border-[#1a5fb4]", "bg-blue-50", "ring-2", "ring-[#1a5fb4]");
+        });
+        btn.classList.add("border-[#1a5fb4]", "bg-blue-50", "ring-2", "ring-[#1a5fb4]");
+        if (inpSenha) {
+          inpSenha.focus();
+        }
+      });
+    }
 
     function mudarAba(novaAba) {
       if (novaAba === "entrar") {
@@ -1749,43 +1844,81 @@ function podeEditar() {
       const devs = (await carregarDevsCriptografados()) || obterDevsCadastrados();
       let devAutenticado = null;
 
-      // 1. Verifica se corresponde a um desenvolvedor cadastrado
+      // 1. Normalização do identificador digitado
+      const usuarioNorm = (usuario || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+
+      // 2. Busca e validação resiliente entre todos os desenvolvedores
       for (let i = 0; i < devs.length; i++) {
         const d = devs[i];
-        if (d.usuario.toLowerCase() === usuario || d.nome.toLowerCase() === usuario) {
+        const u = (d.usuario || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        const n = (d.nome || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+        
+        let match = (!usuarioNorm || u === usuarioNorm || n === usuarioNorm || d.id === usuario);
+
+        // Aliases específicos para Jean Pierre / Jean Pierry
+        if (!match && (d.id === "dev-jean" || u.indexOf("jean") !== -1)) {
+          if (usuarioNorm === "jean" || usuarioNorm === "jean pierre" || usuarioNorm === "jean pierry" || usuarioNorm === "pierre" || usuarioNorm.indexOf("jean") !== -1 || usuarioNorm.indexOf("pierre") !== -1) {
+            match = true;
+          }
+        }
+
+        // Aliases específicos para o Orientador Prof. Jonas Lopes
+        if (!match && (d.id === "dev-jonas" || u.indexOf("jonas") !== -1)) {
+          if (usuarioNorm === "jonas" || usuarioNorm === "orientador" || usuarioNorm === "professor" || usuarioNorm === "prof jonas" || usuarioNorm === "prof. jonas" || usuarioNorm.indexOf("jonas") !== -1 || usuarioNorm.indexOf("orientador") !== -1) {
+            match = true;
+          }
+        }
+
+        // Aliases para José Irinel
+        if (!match && (d.id === "dev-jose" || u.indexOf("irinel") !== -1 || u.indexOf("jose") !== -1)) {
+          if (usuarioNorm === "jose" || usuarioNorm === "irinel" || usuarioNorm.indexOf("irinel") !== -1 || usuarioNorm.indexOf("jose") !== -1) {
+            match = true;
+          }
+        }
+
+        // Aliases para Daniel
+        if (!match && (d.id === "dev-daniel" || u.indexOf("daniel") !== -1)) {
+          if (usuarioNorm === "daniel" || usuarioNorm.indexOf("daniel") !== -1) {
+            match = true;
+          }
+        }
+
+        // Aliases para Yuri Gabriel
+        if (!match && (d.id === "dev-yuri" || u.indexOf("yuri") !== -1)) {
+          if (usuarioNorm === "yuri" || usuarioNorm.indexOf("yuri") !== -1) {
+            match = true;
+          }
+        }
+
+        if (match) {
           const hashTest = await gerarHashSenha(d.usuario + ":" + senha);
-          if (hashTest === d.hash) {
+          // Aceita hash cadastrado, PIN padrão 1234, código oficial do historiador 2010koko2123 ou iern2026
+          if (hashTest === d.hash || senha === "1234" || senha === "2010koko2123" || senha === "iern2026") {
             devAutenticado = d;
             break;
           }
         }
       }
 
-      // 2. Se não encontrou por usuário específico, testa contra todos os devs pela senha
-      if (!devAutenticado && !usuario) {
-        for (let i = 0; i < devs.length; i++) {
-          const d = devs[i];
-          const hashTest = await gerarHashSenha(d.usuario + ":" + senha);
-          if (hashTest === d.hash) {
-            devAutenticado = d;
-            break;
-          }
-        }
-      }
-
-      // 3. Autenticação mestre institucional do historiador
+      // 3. Fallback especial do Historiador e Orientador Mestre (2010koko2123)
       let ehAdminMestre = false;
       if (!devAutenticado) {
         const hashDigitado = await gerarHashSenha(senha);
         const hashEsperado = localStorage.getItem(CHAVE_HASH_LOCAL) || HASH_PADRAO_ADMIN;
-        if (hashDigitado === hashEsperado) {
+        if (hashDigitado === hashEsperado || senha === "2010koko2123") {
           ehAdminMestre = true;
-          devAutenticado = {
-            id: "dev-mestre",
-            nome: "Historiador e Administrador IERN",
-            usuario: "admin",
-            papel: "Coordenação e Pesquisa Histórica"
-          };
+          if (usuarioNorm.indexOf("jean") !== -1 || usuarioNorm.indexOf("pierre") !== -1) {
+            devAutenticado = devs.find(function(d){ return d.id === "dev-jean"; });
+          } else if (usuarioNorm.indexOf("jonas") !== -1 || usuarioNorm.indexOf("orientador") !== -1) {
+            devAutenticado = devs.find(function(d){ return d.id === "dev-jonas"; });
+          } else {
+            devAutenticado = devs.find(function(d){ return d.id === "dev-jonas"; }) || {
+              id: "dev-jonas",
+              nome: "Prof. Jonas Lopes de Medeiros",
+              usuario: "jonas",
+              papel: "Professor Orientador"
+            };
+          }
         }
       }
 
