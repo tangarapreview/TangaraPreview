@@ -1,6 +1,6 @@
 {
-  "versao": 1794319743331,
-  "atualizadoEm": "2026-11-10T14:15:01.272Z",
+  "versao": 1794320165392,
+  "atualizadoEm": "2026-11-10T14:16:05.392Z",
   "pontos": [
     {
       "id": "ponto-mw88e0kxr8tj",
@@ -90,6 +90,15 @@
     }
   ],
   "instagram": [
+    {
+      "id": "ig-mwarwcgge5jv",
+      "titulo": "A Praça do Skate",
+      "descricao": "A Praça do Skate, localizada no bairro Bosque das Palmeiras, é um dos espaços mais vibrantes e importantes para a convivência em Tangará. O local se consolidou como o coração esportivo e cultural da região, sendo o principal ponto de encontro da juventude para a prática de esportes e eventos comunitários ao ar livre.",
+      "link": "https://www.instagram.com/p/De2phcnEf3g/",
+      "embedUrl": "https://www.instagram.com/p/De2phcnEf3g/embed/?cr=1&v=14&wp=540&rd=1",
+      "ehReel": false,
+      "data": "2026-11-10T14:16:05.392Z"
+    },
     {
       "id": "ig-mwarnashdiwb",
       "titulo": "Praça Theodorico Bezerra",
