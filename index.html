@@ -366,6 +366,7 @@
     graduation: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
     fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
+    edit: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
   };
 
   function icone(nome, classes) {
@@ -3776,22 +3777,31 @@ function podeEditar() {
   /* ---------------------------------------------------------------------------
      9. Formulário e detalhes do ponto
      --------------------------------------------------------------------------- */
-  function abrirFormPonto(coords) {
+  function abrirFormPonto(coords, pontoExistente) {
     if (!podeEditar()) {
-      mostrarNotificacaoToast("Apenas moderadores e desenvolvedores autorizados podem adicionar pontos.");
+      mostrarNotificacaoToast("Apenas moderadores e desenvolvedores autorizados podem " + (pontoExistente ? "editar pontos." : "adicionar pontos."));
       return;
     }
-    formPonto = { coords: coords, imagens: [], videos: [], links: [] };
+    formPonto = {
+      id: pontoExistente ? pontoExistente.id : null,
+      coords: coords,
+      imagens: pontoExistente && pontoExistente.imagens ? pontoExistente.imagens.slice() : [],
+      videos: pontoExistente && pontoExistente.videos ? pontoExistente.videos.slice() : [],
+      links: pontoExistente && pontoExistente.links ? pontoExistente.links.slice() : []
+    };
+
+    const valorTitulo = pontoExistente ? escapar(pontoExistente.titulo) : "";
+    const valorDescricao = pontoExistente && pontoExistente.descricao ? escapar(pontoExistente.descricao) : "";
 
     const corpo =
       '<div class="space-y-5">' +
         '<div class="space-y-1.5">' +
           '<label class="' + CLS_LABEL + '" for="ponto-titulo">Título *</label>' +
-          '<input id="ponto-titulo" class="' + CLS_INPUT + '" placeholder="Ex.: Igreja Matriz de Tangará" />' +
+          '<input id="ponto-titulo" class="' + CLS_INPUT + '" value="' + valorTitulo + '" placeholder="Ex.: Igreja Matriz de Tangará" />' +
         "</div>" +
         '<div class="space-y-1.5">' +
           '<label class="' + CLS_LABEL + '" for="ponto-descricao">Descrição</label>' +
-          '<textarea id="ponto-descricao" rows="4" class="' + CLS_TEXTAREA + '" placeholder="Conte um pouco sobre este lugar..."></textarea>' +
+          '<textarea id="ponto-descricao" rows="4" class="' + CLS_TEXTAREA + '" placeholder="Conte um pouco sobre este lugar...">' + valorDescricao + '</textarea>' +
         "</div>" +
         '<div class="space-y-2">' +
           '<p class="' + CLS_TITULO_SECAO + '">Imagens</p>' +
@@ -3835,14 +3845,16 @@ function podeEditar() {
       "</div>";
 
     abrirModal({
-      titulo: "Novo ponto",
-      subtitulo: coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5),
+      titulo: pontoExistente ? "Editar Ponto do Mapa" : "Novo ponto",
+      subtitulo: pontoExistente ? escapar(pontoExistente.titulo) : (coords.lat.toFixed(5) + ", " + coords.lng.toFixed(5)),
       corpoHtml: corpo,
       aoFechar: function () {
         formPonto = null;
       },
       rodapeHtml: rodapeModal(
-        '<button type="button" data-acao="ponto-salvar" id="ponto-salvar" class="' + CLS_BTN_AZUL + '" disabled>Salvar ponto</button>'
+        '<button type="button" data-acao="ponto-salvar" id="ponto-salvar" class="' + CLS_BTN_AZUL + '"' + (pontoExistente && pontoExistente.titulo ? "" : " disabled") + '>' +
+          (pontoExistente ? (icone("check", "w-4 h-4") + " Salvar alterações") : "Salvar ponto") +
+        '</button>'
       ),
     });
 
@@ -3962,17 +3974,33 @@ function podeEditar() {
     if (!titulo) return;
 
     const descElem = document.getElementById("ponto-descricao");
+    const descricao = descElem ? descElem.value.trim() : "";
 
-    dados.pontos.unshift({
-      id: novoId("ponto"),
-      lat: formPonto.coords.lat,
-      lng: formPonto.coords.lng,
-      titulo: titulo,
-      descricao: descElem ? descElem.value.trim() : "",
-      imagens: formPonto.imagens,
-      videos: formPonto.videos,
-      links: formPonto.links,
-    });
+    if (formPonto.id) {
+      // Atualiza o ponto existente
+      const pontoIdx = dados.pontos.findIndex(function (p) { return p.id === formPonto.id; });
+      if (pontoIdx !== -1) {
+        dados.pontos[pontoIdx].titulo = titulo;
+        dados.pontos[pontoIdx].descricao = descricao;
+        dados.pontos[pontoIdx].imagens = formPonto.imagens;
+        dados.pontos[pontoIdx].videos = formPonto.videos;
+        dados.pontos[pontoIdx].links = formPonto.links;
+        mostrarNotificacaoToast("Ponto '" + titulo + "' atualizado com sucesso!");
+      }
+    } else {
+      // Cria novo ponto
+      dados.pontos.unshift({
+        id: novoId("ponto"),
+        lat: formPonto.coords.lat,
+        lng: formPonto.coords.lng,
+        titulo: titulo,
+        descricao: descricao,
+        imagens: formPonto.imagens,
+        videos: formPonto.videos,
+        links: formPonto.links,
+      });
+      mostrarNotificacaoToast("Novo ponto adicionado ao mapa!");
+    }
 
     salvarDados("pontos");
     tocarSomSucesso();
@@ -4063,9 +4091,12 @@ function podeEditar() {
     corpo += "</div>";
 
     const rodape = podeEditar()
-      ? '<div class="flex justify-between items-center">' +
-          '<button type="button" data-acao="ponto-remover" data-id="' + escapar(ponto.id) + '" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#d43a3a] hover:bg-[#a52a2a] text-white text-xs font-medium transition-colors">' + icone("trash", "w-3.5 h-3.5") + "Excluir ponto</button>" +
-          '<button type="button" data-acao="fechar-modal" class="' + CLS_BTN_CONTORNO + '">Fechar</button>' +
+      ? '<div class="flex justify-between items-center gap-2 flex-wrap">' +
+          '<button type="button" data-acao="ponto-remover" data-id="' + escapar(ponto.id) + '" class="flex items-center gap-1.5 px-3 py-1.5 rounded-md bg-[#d43a3a] hover:bg-[#a52a2a] text-white text-xs font-medium transition-colors cursor-pointer" title="Remover este ponto">' + icone("trash", "w-3.5 h-3.5") + "Excluir ponto</button>" +
+          '<div class="flex items-center gap-2">' +
+            '<button type="button" data-acao="ponto-editar" data-id="' + escapar(ponto.id) + '" class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-md bg-[#1a5fb4] hover:bg-[#0d2b52] text-white text-xs font-semibold shadow-sm transition-all hover:scale-105 cursor-pointer" title="Modificar informações, imagens, vídeos ou links deste ponto">' + icone("edit", "w-3.5 h-3.5") + "Editar ponto</button>" +
+            '<button type="button" data-acao="fechar-modal" class="' + CLS_BTN_CONTORNO + '">Fechar</button>' +
+          '</div>' +
         '</div>'
       : '<div class="flex justify-end"><button type="button" data-acao="fechar-modal" class="' + CLS_BTN_CONTORNO + '">Fechar</button></div>';
 
@@ -5421,6 +5452,16 @@ function podeEditar() {
       case "ponto-remover":
         removerPonto(elemento.dataset.id);
         break;
+
+      case "ponto-editar": {
+        const id = elemento.dataset.id;
+        const ponto = dados.pontos.find(function (p) { return p.id === id; });
+        if (ponto) {
+          fecharModal();
+          abrirFormPonto({ lat: ponto.lat, lng: ponto.lng }, ponto);
+        }
+        break;
+      }
 
       /* Editores do ponto */
       case "imagem-add-url": {
