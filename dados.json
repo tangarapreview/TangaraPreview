@@ -1,7 +1,17 @@
 {
-  "versao": 1794166465143,
-  "atualizadoEm": "2026-11-08T19:34:25.143Z",
+  "versao": 1794318773405,
+  "atualizadoEm": "2026-11-10T13:52:53.405Z",
   "pontos": [
+    {
+      "id": "ponto-mwar2ie3bl2p",
+      "lat": -6.200462393029313,
+      "lng": -35.797611236621385,
+      "titulo": "nbckbd,cdn",
+      "descricao": "",
+      "imagens": [],
+      "videos": [],
+      "links": []
+    },
     {
       "id": "ponto-mw88e0kxr8tj",
       "lat": -6.200066221791861,
