@@ -357,6 +357,8 @@
     award: '<circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/>',
     compass: '<circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/>',
     graduation: '<path d="M22 10v6M2 10l10-5 10 5-10 5z"/><path d="M6 12v5c3 3 9 3 12 0v-5"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
+    fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
   };
 
   function icone(nome, classes) {
@@ -380,6 +382,285 @@
      3. Dados
      --------------------------------------------------------------------------- */
   const CHAVES = { pontos: "tp_pontos", posts: "tp_posts", videos: "tp_videos", instagram: "tp_instagram", perfil: "tp_perfil" };
+
+  /* ---------------------------------------------------------------------------
+     Central de Logs & Diagnóstico do Sistema (Bugs, Mensagens, Atualizações, GitHub)
+     --------------------------------------------------------------------------- */
+  const CHAVE_LOGS_LOCAL = "tp_system_logs";
+  const MAX_LOGS_SISTEMA = 120;
+  let _filtroLogAtivo = "todos";
+
+  function obterLogsDoSistema() {
+    try {
+      const bruto = localStorage.getItem(CHAVE_LOGS_LOCAL);
+      if (!bruto) return [];
+      const lista = JSON.parse(bruto);
+      return Array.isArray(lista) ? lista : [];
+    } catch (e) {
+      return [];
+    }
+  }
+
+  function salvarLogsDoSistema(lista) {
+    try {
+      if (!Array.isArray(lista)) lista = [];
+      if (lista.length > MAX_LOGS_SISTEMA) {
+        lista = lista.slice(-MAX_LOGS_SISTEMA);
+      }
+      localStorage.setItem(CHAVE_LOGS_LOCAL, JSON.stringify(lista));
+    } catch (e) {
+      console.warn("Armazenamento cheio ao salvar logs:", e);
+    }
+  }
+
+  function formatarHoraAgora() {
+    const d = new Date();
+    const pad = function(n) { return n < 10 ? "0" + n : n; };
+    return pad(d.getHours()) + ":" + pad(d.getMinutes()) + ":" + pad(d.getSeconds());
+  }
+
+  function registrarLog(tipo, titulo, detalhes, nivel) {
+    // tipo: "bug" | "mensagem" | "atualizacao" | "github"
+    // nivel: "info" | "aviso" | "erro" | "sucesso"
+    try {
+      const logs = obterLogsDoSistema();
+      const novoLog = {
+        id: "log-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 6),
+        dataHora: new Date().toISOString(),
+        horaFormatada: formatarHoraAgora(),
+        tipo: tipo || "mensagem",
+        titulo: String(titulo || "Registro do Sistema"),
+        detalhes: detalhes ? (typeof detalhes === "object" ? JSON.stringify(detalhes) : String(detalhes)) : "",
+        nivel: nivel || (tipo === "bug" ? "erro" : tipo === "github" ? "info" : "info")
+      };
+
+      logs.push(novoLog);
+      salvarLogsDoSistema(logs);
+      atualizarViewLogsEmTempoReal();
+    } catch (err) {
+      console.error("Falha ao registrar log:", err);
+    }
+  }
+
+  function limparLogsDoSistema() {
+    localStorage.removeItem(CHAVE_LOGS_LOCAL);
+    registrarLog("mensagem", "Histórico de Logs Limpo", "Todos os registros anteriores foram excluídos.", "info");
+    atualizarViewLogsEmTempoReal();
+  }
+
+  function exportarLogsArquivo() {
+    try {
+      const logs = obterLogsDoSistema();
+      const exportData = {
+        sistema: "TangaráPreview",
+        versao: "3.6",
+        exportadoEm: new Date().toISOString(),
+        totalLogs: logs.length,
+        logs: logs
+      };
+      const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json;charset=utf-8" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "tangara_preview_logs_" + new Date().toISOString().slice(0, 10) + ".json";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      tocarSomSucesso();
+      mostrarNotificacaoToast("📋 Logs do sistema exportados com sucesso!");
+    } catch (e) {
+      alert("Não foi possível exportar os logs: " + e.message);
+    }
+  }
+
+  function renderListaLogsHtml(filtro) {
+    const logs = obterLogsDoSistema();
+    const filtrados = logs.filter(function (l) {
+      if (!filtro || filtro === "todos") return true;
+      return l.tipo === filtro;
+    });
+
+    if (!filtrados.length) {
+      return '<div class="py-6 text-center text-slate-400 text-xs italic">Nenhum registro encontrado para este filtro.</div>';
+    }
+
+    return filtrados.slice().reverse().map(function (log) {
+      let badgeClasse = "bg-slate-700/60 text-slate-300 border-slate-600";
+      let badgeTexto = "INFO";
+      
+      if (log.tipo === "bug" || log.nivel === "erro") {
+        badgeClasse = "bg-red-500/20 text-red-300 border-red-500/40";
+        badgeTexto = "BUG / ERRO";
+      } else if (log.tipo === "github") {
+        badgeClasse = "bg-sky-500/20 text-sky-300 border-sky-500/40";
+        badgeTexto = "GITHUB";
+      } else if (log.tipo === "atualizacao") {
+        badgeClasse = "bg-emerald-500/20 text-emerald-300 border-emerald-500/40";
+        badgeTexto = "ATUALIZAÇÃO";
+      } else if (log.tipo === "mensagem") {
+        badgeClasse = "bg-amber-500/20 text-amber-300 border-amber-500/40";
+        badgeTexto = "MENSAGEM";
+      }
+
+      return (
+        '<div class="p-2 rounded-lg bg-slate-950/70 border border-slate-800 hover:border-slate-700 transition-colors">' +
+          '<div class="flex items-center justify-between gap-2 mb-1">' +
+            '<div class="flex items-center gap-1.5 min-w-0">' +
+              '<span class="text-[9px] font-bold px-1.5 py-0.5 rounded border uppercase shrink-0 ' + badgeClasse + '">' + badgeTexto + '</span>' +
+              '<span class="text-xs font-semibold text-slate-200 truncate">' + escapar(log.titulo) + '</span>' +
+            '</div>' +
+            '<span class="text-[10px] text-slate-400 shrink-0 font-mono">' + escapar(log.horaFormatada || "") + '</span>' +
+          '</div>' +
+          (log.detalhes ? '<p class="text-[11px] text-slate-300 leading-relaxed font-mono break-all whitespace-pre-wrap bg-slate-900/60 p-1.5 rounded border border-slate-800/80">' + escapar(log.detalhes) + '</p>' : '') +
+        '</div>'
+      );
+    }).join("");
+  }
+
+  function atualizarViewLogsEmTempoReal() {
+    const container = document.getElementById("painel-logs-lista");
+    if (container) {
+      container.innerHTML = renderListaLogsHtml(_filtroLogAtivo);
+    }
+    const logs = obterLogsDoSistema();
+    const contadores = {
+      todos: logs.length,
+      bug: logs.filter(function(l){ return l.tipo === "bug"; }).length,
+      github: logs.filter(function(l){ return l.tipo === "github"; }).length,
+      atualizacao: logs.filter(function(l){ return l.tipo === "atualizacao"; }).length,
+      mensagem: logs.filter(function(l){ return l.tipo === "mensagem"; }).length
+    };
+    document.querySelectorAll("[data-qtd-filtro]").forEach(function(el) {
+      const tipo = el.getAttribute("data-qtd-filtro");
+      if (contadores[tipo] !== undefined) {
+        el.textContent = contadores[tipo];
+      }
+    });
+  }
+
+  // Captura global de erros em tempo de execução para alimentar os logs
+  window.addEventListener("error", function (event) {
+    try {
+      const msg = event.message || "Erro desconhecido";
+      const arq = event.filename ? event.filename.split("/").pop() + ":" + event.lineno : "";
+      registrarLog("bug", "Erro de Script (JS)", msg + (arq ? " [" + arq + "]" : ""), "erro");
+    } catch (_) {}
+  });
+
+  window.addEventListener("unhandledrejection", function (event) {
+    try {
+      const motivo = event.reason && event.reason.message ? event.reason.message : String(event.reason);
+      registrarLog("bug", "Promise Rejeitada (Assíncrona)", motivo, "erro");
+    } catch (_) {}
+  });
+
+  /* ---------------------------------------------------------------------------
+     Visualizador de Imagens em Tela Cheia (Lightbox Pop-up)
+     --------------------------------------------------------------------------- */
+  function abrirModalLightbox(src, legenda) {
+    if (!src) return;
+    let modal = document.getElementById("modal-lightbox");
+    if (!modal) {
+      modal = document.createElement("div");
+      modal.id = "modal-lightbox";
+      modal.className = "fixed inset-0 z-[99999] flex flex-col items-center justify-center p-3 sm:p-6 bg-black/90 backdrop-blur-md transition-opacity duration-200 opacity-0 pointer-events-none select-none";
+      modal.setAttribute("role", "dialog");
+      modal.setAttribute("aria-label", "Visualizador de Imagem Ampliada");
+
+      modal.innerHTML =
+        '<div class="absolute inset-0 cursor-zoom-out" data-acao-lightbox="fechar"></div>' +
+        '<div class="absolute top-3 right-3 sm:top-5 sm:right-5 z-20 flex items-center gap-2 pointer-events-auto">' +
+          '<a id="lightbox-btn-download" href="#" target="_blank" rel="noopener noreferrer" class="w-10 h-10 rounded-full bg-white/15 hover:bg-white/30 text-white flex items-center justify-center shadow-lg transition-transform hover:scale-105" title="Abrir imagem original">' +
+            icone("externo", "w-4 h-4") +
+          '</a>' +
+          '<button type="button" data-acao-lightbox="fechar" class="w-10 h-10 rounded-full bg-white/15 hover:bg-red-600/80 text-white flex items-center justify-center shadow-lg transition-all hover:scale-105 cursor-pointer" title="Fechar (ESC)">' +
+            icone("x", "w-5 h-5") +
+          '</button>' +
+        '</div>' +
+        '<div class="relative z-10 flex flex-col items-center max-w-full max-h-full p-2 pointer-events-auto">' +
+          '<img id="lightbox-img" src="" alt="Imagem ampliada" class="max-w-[95vw] max-h-[82vh] sm:max-h-[85vh] object-contain rounded-2xl shadow-[0_16px_50px_rgba(0,0,0,0.85)] border border-white/15 transition-transform duration-200 cursor-zoom-out" data-acao-lightbox="fechar" />' +
+          '<div id="lightbox-legenda" class="mt-3 px-4 py-1.5 rounded-full bg-black/75 backdrop-blur-md border border-white/15 text-white text-xs sm:text-sm font-medium text-center max-w-xl truncate shadow-lg hidden"></div>' +
+        '</div>';
+
+      document.body.appendChild(modal);
+
+      modal.addEventListener("click", function(e) {
+        if (e.target.closest("[data-acao-lightbox='fechar']")) {
+          fecharModalLightbox();
+        }
+      });
+    }
+
+    const imgEl = document.getElementById("lightbox-img");
+    const legEl = document.getElementById("lightbox-legenda");
+    const btnDown = document.getElementById("lightbox-btn-download");
+
+    if (imgEl) imgEl.src = src;
+    if (btnDown) {
+      btnDown.href = src;
+    }
+    if (legEl) {
+      if (legenda && legenda.trim()) {
+        legEl.textContent = legenda;
+        legEl.classList.remove("hidden");
+      } else {
+        legEl.classList.add("hidden");
+      }
+    }
+
+    modal.classList.remove("opacity-0", "pointer-events-none");
+    modal.classList.add("opacity-100", "pointer-events-auto");
+    document.body.style.overflow = "hidden";
+
+    const escHandler = function(e) {
+      if (e.key === "Escape" || e.keyCode === 27) {
+        fecharModalLightbox();
+        window.removeEventListener("keydown", escHandler);
+      }
+    };
+    window.addEventListener("keydown", escHandler);
+  }
+
+  function fecharModalLightbox() {
+    const modal = document.getElementById("modal-lightbox");
+    if (!modal) return;
+    modal.classList.remove("opacity-100", "pointer-events-auto");
+    modal.classList.add("opacity-0", "pointer-events-none");
+    document.body.style.overflow = "";
+    setTimeout(function() {
+      const imgEl = document.getElementById("lightbox-img");
+      if (imgEl) imgEl.src = "";
+    }, 200);
+  }
+
+  // Delegação global de clique para abrir qualquer imagem no Lightbox
+  document.addEventListener("click", function (e) {
+    const btnLightbox = e.target.closest("[data-lightbox-src]");
+    if (btnLightbox) {
+      e.preventDefault();
+      e.stopPropagation();
+      const src = btnLightbox.getAttribute("data-lightbox-src");
+      const legenda = btnLightbox.getAttribute("data-lightbox-legenda") || "";
+      abrirModalLightbox(src, legenda);
+      return;
+    }
+
+    const img = e.target.closest("#conteudo img, #modais img:not([alt*='Logo']):not([alt*='Google'])");
+    if (img && !img.closest("#modal-lightbox") && !img.closest("a[href*='#/post/']") && !img.closest("#splash-intro") && !img.closest("#btn-alterar-foto-dev")) {
+      // Ignora avatares minúsculos ou ícones
+      if (img.naturalWidth > 64 || img.width > 64 || img.classList.contains("cursor-pointer") || img.closest(".conteudo-post")) {
+        e.preventDefault();
+        abrirModalLightbox(img.src, img.alt || img.title || "");
+      }
+    }
+  });
+
+  window.abrirModalLightbox = abrirModalLightbox;
+  window.fecharModalLightbox = fecharModalLightbox;
+  window.registrarLog = registrarLog;
+  window.obterLogsDoSistema = obterLogsDoSistema;
+  window.limparLogsDoSistema = limparLogsDoSistema;
 
   const DEVS_INICIAIS = [
   {
@@ -910,6 +1191,7 @@
     const urlApi = "https://api.github.com/repos/" + repoCompleto + "/contents/dados.json";
 
     try {
+      registrarLog("github", "Iniciando Live-Sync (dados.json)", "Destino: " + repoCompleto + "@" + branch + " | Motivo: " + (motivo || "Atualização em tempo real"), "info");
       let shaAtual = null;
       try {
         const respGet = await fetch(urlApi + "?ref=" + branch, {
@@ -921,8 +1203,11 @@
         if (respGet.ok) {
           const dadosGet = await respGet.json();
           shaAtual = dadosGet.sha;
+          registrarLog("github", "SHA Obtido (dados.json)", "SHA: " + (shaAtual ? shaAtual.slice(0, 7) : "novo"), "info");
         }
-      } catch (e) {}
+      } catch (e) {
+        registrarLog("bug", "Falha ao obter SHA GitHub", e.message, "aviso");
+      }
 
       const objetoNuvem = {
         versao: dados.versao || Date.now(),
@@ -954,12 +1239,15 @@
 
       if (respPut.ok) {
         _hashUltimosDados = calcularHashDados(objetoNuvem);
+        registrarLog("github", "Sucesso na Publicação (dados.json)", "Commit publicado com sucesso na branch " + branch + "!", "sucesso");
         tocarSomSucesso();
         mostrarNotificacaoToast("⚡ Salvo e publicado globalmente na nuvem em tempo real!");
         return true;
       }
+      registrarLog("github", "Falha ao Publicar dados.json", "Status HTTP: " + respPut.status + " " + respPut.statusText, "erro");
       return false;
     } catch (err) {
+      registrarLog("github", "Erro de Conexão com GitHub", err.message || String(err), "erro");
       return false;
     }
   }
@@ -979,6 +1267,7 @@
     const urlApi = "https://api.github.com/repos/" + repoCompleto + "/contents/" + caminho;
 
     try {
+      registrarLog("github", "Iniciando Sync de index.html", "Caminho: " + caminho + " | Motivo: " + (motivo || "Alteração salva"), "info");
       let shaAtual = null;
       try {
         const respGet = await fetch(urlApi + "?ref=" + branch, {
@@ -1011,8 +1300,14 @@
         body: JSON.stringify(payload)
       });
 
+      if (respPut.ok) {
+        registrarLog("github", "Sucesso na Publicação (index.html)", "index.html sincronizado com êxito no GitHub!", "sucesso");
+      } else {
+        registrarLog("github", "Erro ao sincronizar index.html", "Status HTTP: " + respPut.status, "erro");
+      }
       return respPut.ok;
     } catch (err) {
+      registrarLog("github", "Erro de Conexão (index.html)", err.message || String(err), "erro");
       return false;
     }
   }
@@ -1095,6 +1390,7 @@
       _hashUltimosDados = calcularHashDados(dados);
 
       localStorage.setItem(CHAVES[nome], JSON.stringify(dados[nome]));
+      registrarLog("atualizacao", "Salvo Localmente: " + nome, "Coleção '" + nome + "' salva (" + (dados[nome] ? dados[nome].length : 0) + " registros). Versão: " + dados.versao, "sucesso");
       
       // Notifica abas do mesmo navegador em 0ms
       notificarOutrasAbasLocalmente();
@@ -2513,6 +2809,51 @@ function podeEditar() {
             icone("trash", "w-3.5 h-3.5") + 'Restaurar Dados Originais do Historiador (Anti-Bagunça)' +
           '</button>' +
         '</div>' +
+
+        // Central de Logs do Sistema (Bugs, Mensagens, Atualizações, GitHub)
+        '<div class="pt-3 border-t border-[#0d2b52]/10 space-y-2">' +
+          '<div class="flex items-center justify-between">' +
+            '<div class="flex items-center gap-2">' +
+              '<span class="w-6 h-6 rounded-lg bg-[#0d2b52] text-[#f5c211] flex items-center justify-center font-mono text-[10px] font-black shadow-sm">LOG</span>' +
+              '<div>' +
+                '<h5 class="text-xs font-bold uppercase tracking-wide text-[#0d2b52]">Central de Logs & Diagnóstico</h5>' +
+                '<p class="text-[11px] text-[#121212]/60">Histórico de erros, eventos, alterações e progresso com GitHub</p>' +
+              '</div>' +
+            '</div>' +
+            '<div class="flex items-center gap-1.5">' +
+              '<button type="button" id="btn-exportar-logs" title="Baixar histórico em JSON" class="text-[11px] font-bold px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-[#0d2b52] border border-slate-300 transition-colors inline-flex items-center gap-1 cursor-pointer">' +
+                icone("download", "w-3 h-3") + 'Exportar' +
+              '</button>' +
+              '<button type="button" id="btn-limpar-logs" title="Limpar logs" class="text-[11px] font-bold px-2 py-1 rounded-lg bg-red-50 hover:bg-red-100 text-[#d43a3a] border border-red-200 transition-colors inline-flex items-center gap-1 cursor-pointer">' +
+                icone("trash", "w-3 h-3") + 'Limpar' +
+              '</button>' +
+            '</div>' +
+          '</div>' +
+
+          // Filtros de Logs com Badges de Contagem
+          '<div class="flex items-center gap-1.5 overflow-x-auto py-1 scrollbar-none" id="filtros-logs">' +
+            '<button type="button" data-filtro-log="todos" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#0d2b52] text-white shadow-sm transition-all cursor-pointer">' +
+              'Todos (<span data-qtd-filtro="todos">0</span>)' +
+            '</button>' +
+            '<button type="button" data-filtro-log="bug" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all cursor-pointer">' +
+              'Bugs (<span data-qtd-filtro="bug">0</span>)' +
+            '</button>' +
+            '<button type="button" data-filtro-log="github" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all cursor-pointer">' +
+              'GitHub (<span data-qtd-filtro="github">0</span>)' +
+            '</button>' +
+            '<button type="button" data-filtro-log="atualizacao" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all cursor-pointer">' +
+              'Atualizações (<span data-qtd-filtro="atualizacao">0</span>)' +
+            '</button>' +
+            '<button type="button" data-filtro-log="mensagem" class="px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all cursor-pointer">' +
+              'Mensagens (<span data-qtd-filtro="mensagem">0</span>)' +
+            '</button>' +
+          '</div>' +
+
+          // Container do Terminal de Logs
+          '<div id="painel-logs-lista" class="max-h-56 overflow-y-auto space-y-1.5 p-2 rounded-xl bg-slate-950 text-white font-mono text-[11px] shadow-inner border border-slate-800 select-text">' +
+            renderListaLogsHtml("todos") +
+          '</div>' +
+        '</div>' +
       '</div>';
 
     const rodape =
@@ -2612,7 +2953,46 @@ function podeEditar() {
         restaurarConteudoPadrao();
       });
     }
+
+    // Central de Logs - Eventos
+    const btnExpLogs = document.getElementById("btn-exportar-logs");
+    if (btnExpLogs) {
+      btnExpLogs.addEventListener("click", exportarLogsArquivo);
+    }
+
+    const btnLimpLogs = document.getElementById("btn-limpar-logs");
+    if (btnLimpLogs) {
+      btnLimpLogs.addEventListener("click", function () {
+        if (confirm("Deseja realmente limpar o histórico de logs do sistema?")) {
+          limparLogsDoSistema();
+        }
+      });
+    }
+
+    const containerFiltrosLogs = document.getElementById("filtros-logs");
+    if (containerFiltrosLogs) {
+      containerFiltrosLogs.addEventListener("click", function (e) {
+        const btn = e.target.closest("[data-filtro-log]");
+        if (!btn) return;
+        _filtroLogAtivo = btn.getAttribute("data-filtro-log");
+        
+        containerFiltrosLogs.querySelectorAll("[data-filtro-log]").forEach(function(b) {
+          if (b.getAttribute("data-filtro-log") === _filtroLogAtivo) {
+            b.className = "px-2.5 py-1 rounded-lg text-[11px] font-bold bg-[#0d2b52] text-white shadow-sm transition-all cursor-pointer";
+          } else {
+            b.className = "px-2 py-1 rounded-lg text-[11px] font-bold bg-slate-100 text-slate-700 hover:bg-slate-200 transition-all cursor-pointer";
+          }
+        });
+
+        const listaLogsEl = document.getElementById("painel-logs-lista");
+        if (listaLogsEl) {
+          listaLogsEl.innerHTML = renderListaLogsHtml(_filtroLogAtivo);
+        }
+      });
+    }
+    atualizarViewLogsEmTempoReal();
   }
+  window.abrirPainelDev = abrirPainelDev;
 
   // Trava de segurança para restaurar dados originais sem risco de bagunçar o site
   function restaurarConteudoPadrao() {
@@ -3276,11 +3656,22 @@ function podeEditar() {
     }
 
     try {
+      // Limites geográficos estritos do Estado do Rio Grande do Norte (RN)
+      const LIMITES_RN = L.latLngBounds(
+        L.latLng(-7.25, -38.85), // Sudoeste do RN (fronteira com PB e CE)
+        L.latLng(-4.70, -34.75)  // Nordeste do RN (litoral oriental e setentrional)
+      );
+
       mapa = L.map("mapa", {
         scrollWheelZoom: true,
         zoomControl: true,
         fadeAnimation: true,
+        maxBounds: LIMITES_RN,
+        maxBoundsViscosity: 1.0,
+        minZoom: 8,
+        maxZoom: 20
       }).setView([-6.21095, -35.79157], 13);
+      window.__tangara_mapa = mapa;
       if (mapa.attributionControl) mapa.attributionControl.setPrefix(false);
 
       // Camada Google Maps Satélite Híbrido
@@ -3617,12 +4008,15 @@ function podeEditar() {
     }
 
     if (imagens.length) {
-      corpo += "<div>" + blocoTitulo("Imagens") + '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">';
+      corpo += "<div>" + blocoTitulo("Imagens (Toque para Ampliar)") + '<div class="grid grid-cols-2 sm:grid-cols-3 gap-2">';
       imagens.forEach(function (imagem, i) {
         corpo +=
-          '<a href="' + escapar(imagem) + '" target="_blank" rel="noopener noreferrer" class="block">' +
-            '<img src="' + escapar(imagem) + '" alt="Imagem ' + (i + 1) + ' de ' + escapar(ponto.titulo) + '" class="w-full h-32 rounded-lg object-cover border border-[#0d2b52]/10" />' +
-          "</a>";
+          '<button type="button" class="block w-full text-left overflow-hidden rounded-lg group cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#1a5fb4] border border-[#0d2b52]/10 relative" data-lightbox-src="' + escapar(imagem) + '" data-lightbox-legenda="' + escapar(ponto.titulo + ' - Imagem ' + (i + 1)) + '">' +
+            '<img src="' + escapar(imagem) + '" alt="Imagem ' + (i + 1) + ' de ' + escapar(ponto.titulo) + '" class="w-full h-32 rounded-lg object-cover group-hover:scale-105 transition-transform" />' +
+            '<div class="absolute inset-0 bg-black/0 group-hover:bg-black/25 flex items-center justify-center transition-colors pointer-events-none">' +
+              '<span class="opacity-0 group-hover:opacity-100 transition-opacity bg-black/70 text-white text-[11px] font-bold px-2 py-1 rounded-full flex items-center gap-1 shadow backdrop-blur-sm">' + icone("externo", "w-3 h-3") + ' Ampliar</span>' +
+            '</div>' +
+          '</button>';
       });
       corpo += "</div></div>";
     }
@@ -4707,7 +5101,10 @@ function podeEditar() {
     } else {
       corpo =
         '<article class="bg-white rounded-xl overflow-hidden shadow-[0_2px_6px_rgba(0,0,0,0.12)]">' +
-          (post.banner ? '<img src="' + escapar(post.banner) + '" alt="' + escapar(post.titulo) + '" class="w-full h-56 sm:h-72 object-cover" />' : "") +
+          (post.banner ? '<div class="relative group cursor-pointer overflow-hidden" data-lightbox-src="' + escapar(post.banner) + '" data-lightbox-legenda="' + escapar(post.titulo) + '">' +
+            '<img src="' + escapar(post.banner) + '" alt="' + escapar(post.titulo) + '" class="w-full h-56 sm:h-72 object-cover group-hover:scale-[1.01] transition-transform duration-200" />' +
+            '<div class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-md backdrop-blur-sm pointer-events-none">' + icone("externo", "w-3.5 h-3.5") + ' Ampliar imagem</div>' +
+          '</div>' : "") +
           '<div class="p-5 sm:p-7">' +
             '<h1 class="text-[#0d2b52] font-bold text-2xl sm:text-3xl mb-2">' + escapar(post.titulo) + "</h1>" +
             (post.descricao ? '<p class="text-sm text-[#d43a3a] mb-4">' + escapar(post.descricao) + "</p>" : "") +
