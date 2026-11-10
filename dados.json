@@ -1,6 +1,6 @@
 {
-  "versao": 1794319440159,
-  "atualizadoEm": "2026-11-10T14:04:00.159Z",
+  "versao": 1794319743331,
+  "atualizadoEm": "2026-11-10T14:09:03.331Z",
   "pontos": [
     {
       "id": "ponto-mw88e0kxr8tj",
@@ -90,6 +90,15 @@
     }
   ],
   "instagram": [
+    {
+      "id": "ig-mwarnashdiwb",
+      "titulo": "Praça Theodorico Bezerra",
+      "descricao": "A Praça Theodorico Bezerra, situada na Av. Miguel Barbosa em Tangará, RN, é um importante ponto de referência e espaço de convivência que carrega forte valor histórico para o município. O nome do local homenageia o Major Theodorico Bezerra, figura emblemática da política e da economia norte-riograndense na região do Trairi, conhecido historicamente por sua marcante influência e trajetória na região  \nMais do que um ponto de encontro para a comunidade local e visitantes, a praça simboliza a preservação da memória e da identidade cultural de Tangará, unindo a tradição do povo potiguar ao cotidiano da cidade",
+      "link": "https://www.instagram.com/p/DeZ43hCFaoc/",
+      "embedUrl": "https://www.instagram.com/p/DeZ43hCFaoc/embed/?cr=1&v=14&wp=540&rd=1",
+      "ehReel": false,
+      "data": "2026-11-10T14:09:03.329Z"
+    },
     {
       "id": "ig-mvzdbrw0vfkv",
       "titulo": "O que e o Tangara Preview",
