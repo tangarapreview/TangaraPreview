@@ -207,13 +207,21 @@
   #editor-post .ql-editor { min-height: 220px; }
 
   /* Conteúdo do post publicado */
-  .conteudo-post { line-height: 1.65; color: rgba(18, 18, 18, 0.85); }
-  .conteudo-post p { margin-bottom: 0.75rem; }
-  .conteudo-post img { border-radius: 0.5rem; margin: 0.75rem 0; max-width: 100%; }
+  .conteudo-post { line-height: 1.8; color: #1e293b; font-size: 1rem; }
+  .conteudo-post p { margin-bottom: 1.1rem; }
+  .conteudo-post h1, .conteudo-post h2, .conteudo-post h3 { color: #0d2b52; font-weight: 800; margin-top: 1.5rem; margin-bottom: 0.75rem; letter-spacing: -0.015em; }
+  .conteudo-post h1 { font-size: 1.75rem; border-bottom: 2px solid #e2e8f0; padding-bottom: 0.5rem; }
+  .conteudo-post h2 { font-size: 1.35rem; }
+  .conteudo-post h3 { font-size: 1.15rem; }
+  .conteudo-post blockquote { border-left: 4px solid #1a5fb4; padding: 0.75rem 1.25rem; margin: 1.25rem 0; background: #f8fafc; font-style: italic; border-radius: 0 0.5rem 0.5rem 0; color: #334155; }
+  .conteudo-post img { border-radius: 0.75rem; margin: 1.25rem auto; max-width: 100%; box-shadow: 0 4px 12px rgba(0,0,0,0.08); display: block; }
+  .conteudo-post a { color: #1a5fb4; text-decoration: underline; font-weight: 500; }
+  .conteudo-post ul { list-style: disc; padding-left: 1.75rem; margin-bottom: 1rem; }
+  .conteudo-post ol { list-style: decimal; padding-left: 1.75rem; margin-bottom: 1rem; }
+  .conteudo-post li { margin-bottom: 0.35rem; }
+  .conteudo-post strong { color: #0f172a; font-weight: 700; }
   .conteudo-post .ql-align-center { text-align: center; }
   .conteudo-post .ql-align-right { text-align: right; }
-  .conteudo-post ul { list-style: disc; padding-left: 1.5rem; }
-  .conteudo-post ol { list-style: decimal; padding-left: 1.5rem; }
 
   /* Animacao da Tela de Abertura (Splash Screen) */
   
@@ -367,6 +375,10 @@
     download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/>',
     fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><polyline points="10 9 9 9 8 9"/>',
     edit: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+    calendar: '<rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+    share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" x2="15.42" y1="13.51" y2="17.49"/><line x1="15.41" x2="8.59" y1="6.51" y2="10.49"/>',
+    search: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>',
   };
 
   function icone(nome, classes) {
@@ -4114,44 +4126,142 @@ function podeEditar() {
   let formPost = null;
 
   function htmlSecaoBlog() {
+    const postsFiltrados = filtroBuscaBlog
+      ? dados.posts.filter(function (p) {
+          const termo = filtroBuscaBlog.toLowerCase();
+          return (
+            (p.titulo && p.titulo.toLowerCase().includes(termo)) ||
+            (p.descricao && p.descricao.toLowerCase().includes(termo)) ||
+            (p.conteudo && p.conteudo.toLowerCase().includes(termo))
+          );
+        })
+      : dados.posts;
+
     let lista;
 
     if (!dados.posts.length) {
       lista =
-        '<div class="bg-white p-6 rounded-xl shadow-[0_2px_6px_rgba(0,0,0,0.12)] text-sm italic text-[#121212]/60">' +
-          "Nenhum post publicado ainda." +
-          (podeEditar() ? ' Clique em "Novo post" para escrever o primeiro.' : "") +
+        '<div class="bg-white p-8 sm:p-12 rounded-2xl border border-slate-100 shadow-[0_4px_16px_rgba(0,0,0,0.06)] text-center max-w-lg mx-auto my-6">' +
+          '<div class="w-16 h-16 mx-auto mb-4 rounded-full bg-blue-50 flex items-center justify-center text-[#1a5fb4]">' +
+            icone("newspaper", "w-8 h-8") +
+          '</div>' +
+          '<h3 class="text-[#0d2b52] font-bold text-lg mb-1">Nenhuma matéria publicada ainda</h3>' +
+          '<p class="text-xs sm:text-sm text-[#121212]/60 mb-5 leading-relaxed">' +
+            'Artigos e publicações sobre a história, personalidades e marcos culturais de Tangará-RN serão disponibilizados aqui.' +
+          '</p>' +
+          (podeEditar()
+            ? '<button type="button" data-acao="novo-post" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1a5fb4] hover:bg-[#0d2b52] text-white text-xs sm:text-sm font-semibold transition-all shadow-sm hover:shadow">' + icone("plus", "w-4 h-4") + "Escrever primeira matéria</button>"
+            : "") +
         "</div>";
+    } else if (!postsFiltrados.length) {
+      lista =
+        '<div class="bg-white p-8 rounded-2xl border border-slate-100 text-center text-sm text-[#121212]/60 max-w-md mx-auto my-6">' +
+          '<p class="font-medium text-[#0d2b52] mb-1">Nenhum resultado encontrado para \"' + escapar(filtroBuscaBlog) + '\"</p>' +
+          '<p class="text-xs text-[#121212]/50 mb-3">Tente buscar por outras palavras-chave ou limpe a busca.</p>' +
+          '<button type="button" data-acao="limpar-busca-blog" class="text-xs font-semibold text-[#1a5fb4] hover:underline">Limpar busca</button>' +
+        '</div>';
     } else {
-      lista = '<div class="grid gap-5">' + dados.posts.map(htmlPostCard).join("") + "</div>";
+      lista = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">' + postsFiltrados.map(htmlPostCard).join("") + "</div>";
     }
 
+    const barraPesquisa = dados.posts.length > 0
+      ? '<div class="relative max-w-md w-full mb-6">' +
+          '<span class="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-[#1a5fb4]/60">' + icone("search", "w-4 h-4") + '</span>' +
+          '<input id="busca-posts" type="text" value="' + escapar(filtroBuscaBlog) + '" placeholder="Pesquisar matérias por título ou assunto..." class="' + CLS_INPUT + ' pl-10 pr-9 py-2 text-xs sm:text-sm rounded-xl border border-slate-200 bg-white shadow-sm focus:border-[#1a5fb4] focus:ring-2 focus:ring-[#1a5fb4]/20 transition-all" />' +
+          (filtroBuscaBlog ? '<button type="button" data-acao="limpar-busca-blog" aria-label="Limpar pesquisa" class="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600">' + icone("x", "w-4 h-4") + '</button>' : '') +
+        '</div>'
+      : '';
+
     return (
-      "<section>" +
-        '<div class="flex items-center justify-between gap-3 my-4">' +
-          '<h2 class="text-[#0d2b52] text-2xl font-bold pl-2.5 border-l-[5px] border-[#d43a3a]">Blog</h2>' +
+      '<section class="py-2">' +
+        '<div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 pb-4 border-b border-slate-100">' +
+          '<div>' +
+            '<div class="flex items-center gap-2.5">' +
+              '<h2 class="text-[#0d2b52] text-2xl sm:text-3xl font-extrabold pl-3 border-l-[5px] border-[#d43a3a] tracking-tight">Blog Cultural</h2>' +
+              '<span class="text-xs font-semibold text-[#0d2b52]/70 bg-slate-100 px-2.5 py-0.5 rounded-full">' + dados.posts.length + (dados.posts.length === 1 ? ' matéria' : ' matérias') + '</span>' +
+            '</div>' +
+            '<p class="text-xs sm:text-sm text-[#121212]/60 mt-1 pl-4">Memórias, patrimônio arquitetônico, personalidades e registros históricos de Tangará-RN.</p>' +
+          '</div>' +
           (podeEditar()
-            ? '<button type="button" data-acao="novo-post" class="flex items-center gap-1.5 px-4 py-2.5 rounded-md bg-[#1a5fb4] hover:bg-[#0d2b52] text-white text-sm font-medium transition-colors">' + icone("plus", "w-4 h-4") + "Novo post</button>"
+            ? '<button type="button" data-acao="novo-post" class="self-start sm:self-auto inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#1a5fb4] hover:bg-[#0d2b52] text-white text-xs sm:text-sm font-semibold transition-all shadow-sm hover:shadow-md hover:-translate-y-0.5">' + icone("plus", "w-4 h-4") + "Nova matéria</button>"
             : "") +
         "</div>" +
+        barraPesquisa +
         lista +
       "</section>"
     );
   }
 
+  let filtroBuscaBlog = "";
+
+  function calcularTempoLeitura(textoOuHtml) {
+    if (!textoOuHtml) return "1 min de leitura";
+    const textoLimpo = textoOuHtml.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    const palavras = textoLimpo ? textoLimpo.split(/\s+/).length : 0;
+    const minutos = Math.max(1, Math.round(palavras / 180));
+    return minutos + " min de leitura";
+  }
+
+  function formatarDataPost(dataIso) {
+    if (!dataIso) return "Recente";
+    try {
+      const d = new Date(dataIso);
+      if (isNaN(d.getTime())) return "Recente";
+      return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short", year: "numeric" });
+    } catch (_) {
+      return "Recente";
+    }
+  }
+
   function htmlPostCard(post) {
+    const dataFormatada = formatarDataPost(post.criadoEm);
+    const tempoLeitura = calcularTempoLeitura(post.conteudo);
+
+    const bannerHtml = post.banner
+      ? '<div class="relative aspect-video w-full overflow-hidden bg-slate-100">' +
+          '<img src="' + escapar(post.banner) + '" alt="' + escapar(post.titulo) + '" class="w-full h-full object-cover group-hover:scale-[1.04] transition-transform duration-300 ease-out" loading="lazy" />' +
+          '<span class="absolute top-3 left-3 bg-white/90 backdrop-blur-md text-[#0d2b52] font-semibold text-[11px] px-2.5 py-0.5 rounded-full shadow-sm">Patrimônio & Memória</span>' +
+        '</div>'
+      : '<div class="relative aspect-video w-full overflow-hidden bg-gradient-to-br from-[#0d2b52] via-[#1a5fb4] to-[#0d2b52] flex flex-col items-center justify-center text-white/90 p-4">' +
+          '<div class="w-12 h-12 rounded-full bg-white/10 backdrop-blur-sm flex items-center justify-center mb-2">' + icone("newspaper", "w-6 h-6 text-white") + '</div>' +
+          '<span class="text-[11px] font-medium tracking-wide uppercase opacity-80">TangaráPreview Blog</span>' +
+          '<span class="absolute top-3 left-3 bg-white/20 backdrop-blur-md text-white font-semibold text-[11px] px-2.5 py-0.5 rounded-full">Artigo Cultural</span>' +
+        '</div>';
+
     return (
-      '<a href="#/post/' + encodeURIComponent(post.id) + '" class="block bg-white rounded-xl overflow-hidden shadow-[0_2px_6px_rgba(0,0,0,0.12)] hover:shadow-[0_8px_22px_rgba(0,0,0,0.18)] hover:-translate-y-0.5 transition-all">' +
-        (post.banner ? '<img src="' + escapar(post.banner) + '" alt="' + escapar(post.titulo) + '" class="w-full h-48 sm:h-60 object-cover" />' : "") +
-        '<div class="p-5">' +
-          '<h3 class="text-[#1a5fb4] font-bold text-xl mb-1">' + escapar(post.titulo) + "</h3>" +
-          (post.descricao ? '<p class="text-sm text-[#d43a3a] mb-3">' + escapar(post.descricao) + "</p>" : "") +
-          '<span class="text-xs font-semibold text-[#1a5fb4]">Ler post →</span>' +
+      '<a href="#/post/' + encodeURIComponent(post.id) + '" class="group flex flex-col bg-white rounded-2xl overflow-hidden border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.06)] hover:shadow-[0_12px_28px_rgba(13,43,82,0.12)] hover:-translate-y-1 transition-all duration-200">' +
+        bannerHtml +
+        '<div class="p-5 flex-1 flex flex-col justify-between">' +
+          '<div>' +
+            '<div class="flex items-center gap-3 text-[11px] text-[#121212]/50 font-medium mb-2.5">' +
+              '<span class="flex items-center gap-1">' + icone("calendar", "w-3 h-3 text-[#1a5fb4]") + dataFormatada + '</span>' +
+              '<span>•</span>' +
+              '<span class="flex items-center gap-1">' + icone("clock", "w-3 h-3 text-[#1a5fb4]") + tempoLeitura + '</span>' +
+            '</div>' +
+            '<h3 class="text-[#0d2b52] font-bold text-lg sm:text-xl line-clamp-2 group-hover:text-[#1a5fb4] transition-colors leading-snug mb-2">' + escapar(post.titulo) + "</h3>" +
+            (post.descricao ? '<p class="text-xs sm:text-sm text-[#121212]/70 line-clamp-3 leading-relaxed mb-4">' + escapar(post.descricao) + "</p>" : "") +
+          '</div>' +
+          '<div class="pt-3 border-t border-slate-100 flex items-center justify-between text-xs font-semibold text-[#1a5fb4]">' +
+            '<span class="text-[11px] font-medium text-[#121212]/50 flex items-center gap-1.5">' +
+              '<span class="w-2 h-2 rounded-full bg-[#d43a3a]"></span> TangaráPreview' +
+            '</span>' +
+            '<span class="inline-flex items-center gap-1 group-hover:translate-x-1 transition-transform">' +
+              'Ler matéria ' + icone("externo", "w-3.5 h-3.5") +
+            '</span>' +
+          '</div>' +
         "</div>" +
       "</a>"
     );
   }
 
+  /* ---------------------------------------------------------------------------
+     PROPORÇÃO RECOMENDADA PARA O BANNER DO BLOG:
+     - Formato ideal: 16:9 Widescreen (ex.: 1200 x 675 px ou 1920 x 1080 px).
+     - Formato alternativo: 2:1 Panorâmico (ex.: 1200 x 600 px).
+     - Justificativa técnica: A proporção 16:9 (aspect-video) previne cortes
+       indesejados no assunto principal da imagem tanto na grade de cards do blog
+       quanto no topo expandido da matéria em telas móveis e computadores.
+     --------------------------------------------------------------------------- */
   function abrirFormPost(postExistente) {
     if (!podeEditar()) {
       mostrarNotificacaoToast("Apenas moderadores e desenvolvedores autorizados podem " + (postExistente ? "editar posts." : "criar posts."));
@@ -4169,7 +4279,17 @@ function podeEditar() {
     const corpo =
       '<div class="space-y-5">' +
         '<div class="space-y-2">' +
-          '<p class="' + CLS_TITULO_SECAO + '">Banner</p>' +
+          '<div class="flex items-center justify-between">' +
+            '<p class="' + CLS_TITULO_SECAO + '">Banner de destaque</p>' +
+            '<span class="text-[11px] font-semibold text-[#1a5fb4] bg-blue-50 px-2 py-0.5 rounded-full border border-blue-200/60">Proporção 16:9</span>' +
+          '</div>' +
+          '<div class="flex items-start gap-2.5 p-3 rounded-lg bg-[#1a5fb4]/5 border border-[#1a5fb4]/20 text-xs text-[#0d2b52] leading-relaxed">' +
+            '<span class="text-[#1a5fb4] mt-0.5 flex-shrink-0">' + icone("info", "w-4 h-4") + '</span>' +
+            '<div>' +
+              '<strong class="font-semibold text-[#0d2b52]">Proporção recomendada: 16:9 widescreen</strong> (ex: <code>1200 × 675 px</code> ou <code>1920 × 1080 px</code>) ou <strong>2:1</strong> (<code>1200 × 600 px</code>).' +
+              '<p class="text-[#0d2b52]/75 mt-0.5">Mantém o enquadramento perfeito nos cards do blog e no topo da matéria sem cortes indesejados. Formatos ideais: JPG, PNG ou WebP.</p>' +
+            '</div>' +
+          '</div>' +
           '<div id="banner-area"></div>' +
         "</div>" +
         '<div class="space-y-1.5">' +
@@ -4212,45 +4332,33 @@ function podeEditar() {
 
     formPost.quill = new Quill("#editor-post", {
       theme: "snow",
-      placeholder: "Escreva aqui... use as ferramentas acima para negrito, itálico, sublinhado, alinhamento e imagens.",
+      placeholder: "Escreva seu texto aqui...",
       modules: {
-        toolbar: {
-          container: [
-            ["bold", "italic", "underline"],
-            [{ align: "" }, { align: "center" }, { align: "right" }],
-            ["image"],
-            [{ list: "ordered" }, { list: "bullet" }],
-            ["clean"],
-          ],
-          handlers: {
-            image: function () {
-              const campo = document.createElement("input");
-              campo.type = "file";
-              campo.accept = "image/*";
-              campo.onchange = async function () {
-                const arquivo = campo.files && campo.files[0];
-                if (!arquivo) return;
-                try {
-                  const dataUrl = await arquivoParaImagem(arquivo, 1200, 0.78);
-                  const intervalo = this.quill.getSelection(true) || { index: this.quill.getLength() };
-                  this.quill.insertEmbed(intervalo.index, "image", dataUrl, "user");
-                  this.quill.setSelection(intervalo.index + 1, 0);
-                } catch (e) {
-                  mostrarErroPost("Não foi possível enviar a imagem.");
-                }
-              }.bind(this);
-              campo.click();
-            },
-          },
-        },
+        toolbar: [
+          [{ header: [1, 2, 3, false] }],
+          ["bold", "italic", "underline"],
+          [{ align: "" }, { align: "center" }, { align: "right" }],
+          ["link", "image"],
+          ["clean"],
+        ],
       },
     });
 
     if (postExistente && postExistente.conteudo) {
-      try {
-        formPost.quill.root.innerHTML = postExistente.conteudo;
-      } catch (_) {}
+      formPost.quill.root.innerHTML = postExistente.conteudo;
     }
+
+    const campoDesc = document.getElementById("post-descricao");
+    const botaoPublicar = document.getElementById("post-publicar");
+
+    function validarFormPost() {
+      if (!campoTitulo || !botaoPublicar) return;
+      const temTitulo = campoTitulo.value.trim().length > 0;
+      botaoPublicar.disabled = !temTitulo;
+    }
+
+    if (campoTitulo) campoTitulo.addEventListener("input", validarFormPost);
+    if (campoDesc) campoDesc.addEventListener("input", validarFormPost);
   }
 
   function mostrarErroPost(mensagem) {
@@ -4266,22 +4374,27 @@ function podeEditar() {
 
     if (formPost.banner) {
       area.innerHTML =
-        '<div class="relative">' +
-          '<img src="' + escapar(formPost.banner) + '" alt="Banner do post" class="w-full h-40 rounded-lg object-cover border border-[#0d2b52]/10" />' +
-          '<button type="button" data-acao="banner-remover" aria-label="Remover banner" class="absolute top-2 right-2 w-7 h-7 rounded-full bg-[#d43a3a] text-white flex items-center justify-center shadow">' + icone("x", "w-4 h-4") + "</button>" +
+        '<div class="relative group rounded-xl overflow-hidden border border-[#0d2b52]/15 shadow-sm bg-slate-50">' +
+          '<div class="aspect-video w-full overflow-hidden flex items-center justify-center bg-black/5">' +
+            '<img src="' + escapar(formPost.banner) + '" alt="Banner do post" class="w-full h-full object-cover" />' +
+          '</div>' +
+          '<div class="absolute bottom-2 left-2 bg-black/70 backdrop-blur-sm text-white text-[11px] font-medium px-2 py-0.5 rounded-md flex items-center gap-1 shadow">' +
+            icone("check", "w-3 h-3 text-emerald-400") + ' Banner 16:9 definido' +
+          '</div>' +
+          '<button type="button" data-acao="banner-remover" aria-label="Remover banner" class="absolute top-2 right-2 w-8 h-8 rounded-full bg-[#d43a3a] hover:bg-[#a52a2a] text-white flex items-center justify-center shadow-md transition-colors" title="Remover imagem do banner">' + icone("x", "w-4 h-4") + "</button>" +
         "</div>";
       return;
     }
 
     area.innerHTML =
-      '<div class="space-y-2">' +
+      '<div class="space-y-2.5">' +
         '<div class="flex gap-2">' +
-          '<input id="banner-url" class="' + CLS_INPUT + '" placeholder="Cole o link de uma imagem" />' +
-          '<button type="button" data-acao="banner-usar" class="' + CLS_BTN_CONTORNO + '">Usar</button>' +
+          '<input id="banner-url" class="' + CLS_INPUT + '" placeholder="Cole o link direto da imagem (https://...)" />' +
+          '<button type="button" data-acao="banner-usar" class="' + CLS_BTN_CONTORNO + ' flex-shrink-0">Usar link</button>' +
         "</div>" +
-        '<label class="' + CLS_UPLOAD + '" id="banner-upload">' +
+        '<label class="' + CLS_UPLOAD + ' cursor-pointer flex items-center justify-center gap-2 p-4 rounded-xl border-2 border-dashed border-[#1a5fb4]/30 hover:border-[#1a5fb4] bg-slate-50/60 hover:bg-blue-50/40 transition-all text-[#1a5fb4] text-xs font-semibold" id="banner-upload">' +
           '<span id="banner-upload-icone">' + icone("upload", "w-4 h-4") + "</span>" +
-          '<span id="banner-upload-texto">Enviar banner do dispositivo</span>' +
+          '<span id="banner-upload-texto">Enviar imagem do dispositivo (proporção 16:9 recomendada)</span>' +
           '<input type="file" accept="image/*" class="hidden" id="banner-arquivo" />' +
         "</label>" +
       "</div>";
@@ -4299,38 +4412,25 @@ function podeEditar() {
 
     const bannerArquivo = document.getElementById("banner-arquivo");
     if (bannerArquivo) {
-      bannerArquivo.addEventListener("change", enviarBannerArquivo);
+      bannerArquivo.addEventListener("change", function (evento) {
+        const arq = evento.target.files && evento.target.files[0];
+        if (arq) enviarBannerArquivo(arq);
+      });
     }
   }
 
-  async function enviarBannerArquivo(evento) {
-    const campo = evento.target;
-    const arquivo = campo.files && campo.files[0];
-    if (!arquivo) return;
-
-    const rotulo = document.getElementById("banner-upload");
-    const iconeEnvio = document.getElementById("banner-upload-icone");
-    const textoEnvio = document.getElementById("banner-upload-texto");
-
-    rotulo.style.opacity = "0.6";
-    rotulo.style.pointerEvents = "none";
-    iconeEnvio.innerHTML = icone("loader", "w-4 h-4 animate-spin");
-    textoEnvio.textContent = "Enviando...";
-
-    try {
-      if (formPost) {
-        formPost.banner = await arquivoParaImagem(arquivo, 1200, 0.78);
-        desenharBanner();
-      }
-    } catch (e) {
-      mostrarErroPost("Não foi possível enviar o banner.");
-      rotulo.style.opacity = "";
-      rotulo.style.pointerEvents = "";
-      iconeEnvio.innerHTML = icone("upload", "w-4 h-4");
-      textoEnvio.textContent = "Enviar banner do dispositivo";
-    } finally {
-      campo.value = "";
+  function enviarBannerArquivo(arquivo) {
+    if (!arquivo.type.startsWith("image/")) {
+      mostrarErroPost("Envie um arquivo de imagem válido.");
+      return;
     }
+
+    const leitor = new FileReader();
+    leitor.onload = function (evento) {
+      formPost.banner = evento.target.result;
+      desenharBanner();
+    };
+    leitor.readAsDataURL(arquivo);
   }
 
   function publicarPost() {
@@ -4355,6 +4455,10 @@ function podeEditar() {
         dados.posts[postIdx].descricao = descricao;
         dados.posts[postIdx].banner = formPost.banner;
         dados.posts[postIdx].conteudo = conteudoHtml;
+        dados.posts[postIdx].editadoEm = new Date().toISOString();
+        if (!dados.posts[postIdx].criadoEm) {
+          dados.posts[postIdx].criadoEm = new Date().toISOString();
+        }
         mostrarNotificacaoToast("Post '" + titulo + "' atualizado com sucesso!");
       }
     } else {
@@ -4365,6 +4469,7 @@ function podeEditar() {
         descricao: descricao,
         banner: formPost.banner,
         conteudo: conteudoHtml,
+        criadoEm: new Date().toISOString()
       });
       mostrarNotificacaoToast("Post publicado com sucesso!");
     }
@@ -5193,39 +5298,74 @@ function podeEditar() {
 
     if (!post) {
       corpo =
-        '<div class="bg-white p-6 rounded-xl shadow-[0_2px_6px_rgba(0,0,0,0.12)] text-sm text-[#121212]/70">' +
-          "Post não encontrado." +
+        '<div class="bg-white p-8 rounded-2xl shadow-[0_2px_8px_rgba(0,0,0,0.06)] border border-slate-100 text-center max-w-lg mx-auto my-6">' +
+          '<div class="w-12 h-12 mx-auto mb-3 rounded-full bg-red-50 flex items-center justify-center text-[#d43a3a]">' + icone("info", "w-6 h-6") + '</div>' +
+          '<h3 class="text-base font-bold text-[#0d2b52] mb-1">Publicação não encontrada</h3>' +
+          '<p class="text-xs text-[#121212]/60 mb-4">A publicação solicitada não existe ou foi removida.</p>' +
+          '<a href="#/" data-acao="voltar-blog" class="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg bg-[#1a5fb4] text-white text-xs font-semibold hover:bg-[#0d2b52] transition-colors">' + icone("voltar", "w-4 h-4") + 'Voltar ao Blog</a>' +
         "</div>";
     } else {
+      const dataFormatada = formatarDataPost(post.criadoEm);
+      const tempoLeitura = calcularTempoLeitura(post.conteudo);
+
+      const bannerHtml = post.banner
+        ? '<div class="relative group cursor-pointer overflow-hidden aspect-video sm:aspect-[21/9] w-full bg-slate-900" data-lightbox-src="' + escapar(post.banner) + '" data-lightbox-legenda="' + escapar(post.titulo) + '">' +
+            '<img src="' + escapar(post.banner) + '" alt="' + escapar(post.titulo) + '" class="w-full h-full object-cover group-hover:scale-[1.02] transition-transform duration-300 ease-out" />' +
+            '<div class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg backdrop-blur-sm pointer-events-none">' + icone("externo", "w-3.5 h-3.5") + ' Ampliar imagem</div>' +
+          '</div>'
+        : '';
+
       corpo =
-        '<article class="bg-white rounded-xl overflow-hidden shadow-[0_2px_6px_rgba(0,0,0,0.12)]">' +
-          (post.banner ? '<div class="relative group cursor-pointer overflow-hidden" data-lightbox-src="' + escapar(post.banner) + '" data-lightbox-legenda="' + escapar(post.titulo) + '">' +
-            '<img src="' + escapar(post.banner) + '" alt="' + escapar(post.titulo) + '" class="w-full h-56 sm:h-72 object-cover group-hover:scale-[1.01] transition-transform duration-200" />' +
-            '<div class="absolute bottom-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity bg-black/75 text-white text-xs font-bold px-2.5 py-1 rounded-full flex items-center gap-1.5 shadow-md backdrop-blur-sm pointer-events-none">' + icone("externo", "w-3.5 h-3.5") + ' Ampliar imagem</div>' +
-          '</div>' : "") +
-          '<div class="p-5 sm:p-7">' +
-            '<h1 class="text-[#0d2b52] font-bold text-2xl sm:text-3xl mb-2">' + escapar(post.titulo) + "</h1>" +
-            (post.descricao ? '<p class="text-sm text-[#d43a3a] mb-4">' + escapar(post.descricao) + "</p>" : "") +
-            (post.conteudo ? '<div class="conteudo-post">' + sanitizarConteudoHtml(post.conteudo) + "</div>" : "") +
+        '<article class="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(0,0,0,0.06)] border border-slate-100">' +
+          bannerHtml +
+          '<div class="p-6 sm:p-10">' +
+            '<div class="flex flex-wrap items-center gap-2.5 mb-3 text-xs font-medium">' +
+              '<span class="bg-[#1a5fb4]/10 text-[#1a5fb4] font-bold text-[11px] px-2.5 py-0.5 rounded-full">Patrimônio & Memória</span>' +
+              '<span class="text-[#121212]/40">•</span>' +
+              '<span class="flex items-center gap-1 text-[#121212]/60">' + icone("calendar", "w-3.5 h-3.5 text-[#1a5fb4]") + dataFormatada + '</span>' +
+              '<span class="text-[#121212]/40">•</span>' +
+              '<span class="flex items-center gap-1 text-[#121212]/60">' + icone("clock", "w-3.5 h-3.5 text-[#1a5fb4]") + tempoLeitura + '</span>' +
+            '</div>' +
+            '<h1 class="text-[#0d2b52] font-black text-2xl sm:text-4xl tracking-tight leading-tight mb-4">' + escapar(post.titulo) + "</h1>" +
+            (post.descricao
+              ? '<div class="p-4 rounded-xl bg-slate-50 border-l-4 border-[#1a5fb4] text-sm sm:text-base text-[#121212]/80 font-normal leading-relaxed mb-6">' + escapar(post.descricao) + "</div>"
+              : "") +
+            (post.conteudo ? '<div class="conteudo-post pt-2">' + sanitizarConteudoHtml(post.conteudo) + "</div>" : "") +
+            '<div class="mt-10 pt-6 border-t border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4">' +
+              '<div class="flex items-center gap-3">' +
+                '<div class="w-10 h-10 rounded-full bg-[#0d2b52] text-white flex items-center justify-center font-bold text-sm shadow-sm">' +
+                  icone("newspaper", "w-5 h-5") +
+                '</div>' +
+                '<div>' +
+                  '<p class="text-xs font-bold text-[#0d2b52]">Redação TangaráPreview</p>' +
+                  '<p class="text-[11px] text-[#121212]/60">Cartografia Histórica e Patrimonial de Tangará-RN</p>' +
+                '</div>' +
+              '</div>' +
+              '<div class="flex items-center gap-2">' +
+                '<button type="button" data-acao="post-compartilhar" data-titulo="' + escapar(post.titulo) + '" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-[#0d2b52] transition-colors cursor-pointer" title="Compartilhar link desta matéria">' +
+                  icone("share", "w-3.5 h-3.5 text-[#1a5fb4]") + ' Compartilhar' +
+                '</button>' +
+              '</div>' +
+            '</div>' +
           "</div>" +
         "</article>";
     }
 
     const barraAcoes =
-      '<div class="flex items-center justify-between mb-4 flex-wrap gap-2">' +
-        '<a href="#/" data-acao="voltar-blog" class="inline-flex items-center gap-1.5 text-sm font-medium text-[#1a5fb4] hover:text-[#0d2b52]">' +
+      '<div class="flex items-center justify-between mb-5 flex-wrap gap-2.5">' +
+        '<a href="#/" data-acao="voltar-blog" class="inline-flex items-center gap-2 text-xs sm:text-sm font-semibold text-[#1a5fb4] hover:text-[#0d2b52] bg-white px-3.5 py-2 rounded-xl shadow-sm border border-slate-100 hover:border-slate-200 transition-all hover:-translate-x-0.5">' +
           icone("voltar", "w-4 h-4") + "Voltar para o blog" +
         "</a>" +
         (podeEditar() && post
           ? '<div class="flex items-center gap-2">' +
-              '<button type="button" data-acao="post-editar" data-id="' + escapar(post.id) + '" class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-md text-xs font-semibold bg-[#1a5fb4] hover:bg-[#0d2b52] text-white shadow-sm transition-all hover:scale-105 cursor-pointer" title="Modificar texto, banner ou descrição deste post">' + icone("edit", "w-3.5 h-3.5") + "Editar post</button>" +
-              '<button type="button" data-acao="post-remover" data-id="' + escapar(post.id) + '" class="inline-flex items-center gap-1 px-3 py-1.5 rounded-md text-xs font-medium bg-[#d43a3a] hover:bg-[#a52a2a] text-white transition-colors cursor-pointer" title="Excluir este post">' + icone("trash", "w-3.5 h-3.5") + "Excluir post</button>" +
+              '<button type="button" data-acao="post-editar" data-id="' + escapar(post.id) + '" class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold bg-[#1a5fb4] hover:bg-[#0d2b52] text-white shadow-sm transition-all hover:scale-105 cursor-pointer" title="Modificar texto, banner ou descrição deste post">' + icone("edit", "w-3.5 h-3.5") + "Editar post</button>" +
+              '<button type="button" data-acao="post-remover" data-id="' + escapar(post.id) + '" class="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold bg-[#d43a3a] hover:bg-[#a52a2a] text-white shadow-sm transition-colors cursor-pointer" title="Excluir este post">' + icone("trash", "w-3.5 h-3.5") + "Excluir post</button>" +
             '</div>'
           : "") +
       "</div>";
 
     document.getElementById("conteudo").innerHTML =
-      '<div class="max-w-[820px] w-full mx-auto px-4 py-6">' +
+      '<div class="max-w-[860px] w-full mx-auto px-4 py-6">' +
         barraAcoes +
         corpo +
       "</div>";
@@ -5418,6 +5558,20 @@ function podeEditar() {
   /* ---------------------------------------------------------------------------
      16. Eventos
      --------------------------------------------------------------------------- */
+  document.addEventListener("input", function (evento) {
+    if (evento.target && evento.target.id === "busca-posts") {
+      filtroBuscaBlog = evento.target.value;
+      const containerOutros = document.getElementById("secao-outros-container");
+      if (containerOutros && abaAtiva === "blog") {
+        containerOutros.innerHTML = htmlSecaoBlog();
+        const inputNovo = document.getElementById("busca-posts");
+        if (inputNovo) {
+          inputNovo.focus();
+          inputNovo.setSelectionRange(inputNovo.value.length, inputNovo.value.length);
+        }
+      }
+    }
+  });
   document.addEventListener("click", function (evento) {
     const elemento = evento.target.closest("[data-acao]");
     if (!elemento) return;
@@ -5462,6 +5616,25 @@ function podeEditar() {
         evento.preventDefault();
         irParaBlog();
         break;
+
+      case "limpar-busca-blog":
+        filtroBuscaBlog = "";
+        renderConteudo();
+        break;
+
+      case "post-compartilhar": {
+        const urlPost = window.location.href;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(urlPost).then(function () {
+            mostrarNotificacaoToast("Link da matéria copiado para a área de transferência!");
+          }).catch(function () {
+            mostrarNotificacaoToast("Link: " + urlPost);
+          });
+        } else {
+          mostrarNotificacaoToast("Link: " + urlPost);
+        }
+        break;
+      }
 
       /* Mapa */
       case "mapa-adicionar":
