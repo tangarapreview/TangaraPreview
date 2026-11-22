@@ -1,6 +1,6 @@
 {
-  "versao": 1795371232613,
-  "atualizadoEm": "2026-11-22T18:13:52.613Z",
+  "versao": 1795371555950,
+  "atualizadoEm": "2026-11-22T18:19:15.950Z",
   "pontos": [
     {
       "id": "ponto-mw88e0kxr8tj",
@@ -103,6 +103,15 @@
     }
   ],
   "instagram": [
+    {
+      "id": "ig-mws5valptbg0",
+      "titulo": "Trairi RN",
+      "descricao": "Conheça a comunidade do Trairi, um dos verdadeiros tesouros de Tangará/RN! Mais do que belas paisagens, o Trairi guarda uma parte fundamental da nossa história e geografia, especialmente ao redor da grandiosidade do Açude Público Trairi. Uma comunidade forte, acolhedora e que pulsa a cultura do nosso município.\nAcompanhe o projeto para desbravar mais cantinhos da nossa terra!\nComunidade Trairi, Tangará - RN",
+      "link": "https://www.instagram.com/reel/DgAdcBxBvPU/",
+      "embedUrl": "https://www.instagram.com/p/DgAdcBxBvPU/embed/?cr=1&v=14&wp=540&rd=1",
+      "ehReel": true,
+      "data": "2026-11-22T18:19:15.949Z"
+    },
     {
       "id": "ig-mws5od453ig5",
       "titulo": "Açude público Trairi",
