@@ -1,6 +1,6 @@
 {
-  "versao": 1795053754844,
-  "atualizadoEm": "2026-11-19T02:02:34.844Z",
+  "versao": 1795370841799,
+  "atualizadoEm": "2026-11-22T18:07:21.799Z",
   "pontos": [
     {
       "id": "ponto-mw88e0kxr8tj",
@@ -103,6 +103,15 @@
     }
   ],
   "instagram": [
+    {
+      "id": "ig-mws5fzk53zu7",
+      "titulo": "Capela São João Batista",
+      "descricao": "A capela de São João Batista está localizada na comunidade do Trairi, construída através de doações pelos fiéis.",
+      "link": "https://www.instagram.com/p/DfPiVjYFb4b/",
+      "embedUrl": "https://www.instagram.com/p/DfPiVjYFb4b/embed/?cr=1&v=14&wp=540&rd=1",
+      "ehReel": false,
+      "data": "2026-11-22T18:07:21.797Z"
+    },
     {
       "id": "ig-mwas9vrdjet8",
       "titulo": "A Praça do Skate",
