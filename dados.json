@@ -1,6 +1,6 @@
 {
-  "versao": 1795370841799,
-  "atualizadoEm": "2026-11-22T18:07:21.799Z",
+  "versao": 1795371232613,
+  "atualizadoEm": "2026-11-22T18:13:52.613Z",
   "pontos": [
     {
       "id": "ponto-mw88e0kxr8tj",
@@ -103,6 +103,15 @@
     }
   ],
   "instagram": [
+    {
+      "id": "ig-mws5od453ig5",
+      "titulo": "Açude público Trairi",
+      "descricao": "Localizado em Tangará/RN e alimentado pela bacia do Rio Trairi, o Açude Público Trairi é um reservatório essencial para a agricultura familiar, a pesca artesanal e a convivência com o semiárido, além de servir como ponto tradicional de lazer e contemplação nos períodos de cheia.",
+      "link": "https://www.instagram.com/p/DfSrxjsGDqe/",
+      "embedUrl": "https://www.instagram.com/p/DfSrxjsGDqe/embed/?cr=1&v=14&wp=540&rd=1",
+      "ehReel": false,
+      "data": "2026-11-22T18:13:52.613Z"
+    },
     {
       "id": "ig-mws5fzk53zu7",
       "titulo": "Capela São João Batista",
